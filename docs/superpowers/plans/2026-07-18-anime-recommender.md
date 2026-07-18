@@ -1770,7 +1770,7 @@ const candidate = { id: 2, title: 'Tsukihime', genres: [], studios: [], coverIma
 
 function renderHome() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Home />
     </MemoryRouter>
   );
@@ -2064,7 +2064,7 @@ vi.mock('../storage/listStorage.js', () => ({
 
 function renderCatalogue() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Catalogue />
     </MemoryRouter>
   );
@@ -2461,7 +2461,7 @@ const entry = {
 
 function renderMyList() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <MyList />
     </MemoryRouter>
   );
@@ -2808,7 +2808,10 @@ const details = {
 
 function renderDetail(id = '1') {
   return render(
-    <MemoryRouter initialEntries={[`/anime/${id}`]}>
+    <MemoryRouter
+      initialEntries={[`/anime/${id}`]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <Routes>
         <Route path="/anime/:id" element={<AnimeDetail />} />
       </Routes>

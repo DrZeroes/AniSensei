@@ -22,7 +22,7 @@ const candidate = { id: 2, title: 'Tsukihime', genres: [], studios: [], coverIma
 
 function renderHome() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Home />
     </MemoryRouter>
   );

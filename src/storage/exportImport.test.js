@@ -40,6 +40,14 @@ describe('serializeList / parseImportedList', () => {
   it('throws when the JSON is not an array of valid entries', () => {
     expect(() => parseImportedList(JSON.stringify({ foo: 'bar' }))).toThrow('Fichier invalide');
   });
+
+  it('throws when an entry is missing required fields', () => {
+    const malformedArray = JSON.stringify([
+      { animeId: 1, title: 'Valid Entry' },
+      { title: 'Missing animeId' }, // Missing animeId
+    ]);
+    expect(() => parseImportedList(malformedArray)).toThrow('Fichier invalide');
+  });
 });
 
 describe('mergeLists', () => {

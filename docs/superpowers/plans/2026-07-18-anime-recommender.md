@@ -3043,7 +3043,318 @@ git commit -m "Add Fiche anime detail page with similar anime section"
 
 ---
 
-## Task 16: GitHub Pages deployment
+## Task 16: Discovery bonus suggestion
+
+**Files:**
+- Create: `src/recommend/discovery.js`
+- Test: `src/recommend/discovery.test.js`
+- Modify: `src/recommend/fetchRecommendationData.js`
+- Modify: `src/recommend/fetchRecommendationData.test.js`
+- Modify: `src/pages/Home.jsx`
+- Modify: `src/pages/Home.test.jsx`
+
+**Interfaces:**
+- Consumes: `browseCatalogue` (`src/api/queries.js`, Task 3), `scoreCandidate` (Task 6), `pickWeighted` (Task 8).
+- Produces: `fetchDiscoveryPick(baseList: Array<MediaSummary>, favoritesList?: Array<MediaSummary>, excludeIds?: Array<number>, rng?: () => number): Promise<MediaSummary|null>`
+  - Picks the most common genre across `baseList`, queries the catalogue for that genre starting past the ~top-500-most-popular pages (page 11+ at 50 per page, randomized within a 10-page window), scores the results with `scoreCandidate` against `baseList`/`favoritesList`, excludes `excludeIds` and the base anime themselves, and returns one weighted-random pick (or `null` if no genre/candidate is available).
+- `fetchRecommendationData` (Task 9) now also returns `discoveryPick: MediaSummary|null` alongside `pool` and `baseList`.
+
+- [ ] **Step 1: Write the failing discovery tests**
+
+`src/recommend/discovery.test.js`:
+```js
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchDiscoveryPick } from './discovery.js';
+import { browseCatalogue } from '../api/queries.js';
+
+vi.mock('../api/queries.js', () => ({
+  browseCatalogue: vi.fn(),
+}));
+
+const baseList = [
+  { id: 1, genres: ['Action', 'Drama'], studios: [] },
+  { id: 2, genres: ['Action'], studios: [] },
+];
+const matching = { id: 10, genres: ['Action'], studios: [] };
+const notMatching = { id: 11, genres: ['Romance'], studios: [] };
+
+describe('fetchDiscoveryPick', () => {
+  beforeEach(() => {
+    browseCatalogue.mockReset();
+  });
+
+  it('returns null when the base list has no genres', async () => {
+    const result = await fetchDiscoveryPick([], [], []);
+    expect(result).toBeNull();
+    expect(browseCatalogue).not.toHaveBeenCalled();
+  });
+
+  it('queries the catalogue filtered by the dominant genre, beyond the top-500 popularity pages', async () => {
+    browseCatalogue.mockResolvedValue({ media: [matching], hasNextPage: true });
+
+    await fetchDiscoveryPick(baseList, [], [], () => 0);
+
+    expect(browseCatalogue).toHaveBeenCalledWith(
+      expect.objectContaining({ genre: 'Action', page: 11, perPage: 50, sort: ['POPULARITY_DESC'] })
+    );
+  });
+
+  it('picks a candidate that overlaps with the base genres', async () => {
+    browseCatalogue.mockResolvedValue({ media: [notMatching, matching], hasNextPage: true });
+
+    const result = await fetchDiscoveryPick(baseList, [], [], () => 0.99);
+
+    expect(result.id).toBe(10);
+  });
+
+  it('excludes ids already in the base list or excludeIds', async () => {
+    browseCatalogue.mockResolvedValue({ media: [matching], hasNextPage: true });
+
+    const result = await fetchDiscoveryPick(baseList, [], [10]);
+
+    expect(result).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `npm test -- discovery.test.js`
+Expected: FAIL (`src/recommend/discovery.js` does not exist).
+
+- [ ] **Step 3: Implement discovery.js**
+
+`src/recommend/discovery.js`:
+```js
+import { browseCatalogue } from '../api/queries.js';
+import { scoreCandidate } from './scoring.js';
+import { pickWeighted } from './pickResults.js';
+
+const POPULARITY_OFFSET_PAGES = 10; // ~top 500 most popular (perPage 50 * 10 pages)
+const PAGE_RANGE = 10;
+const PER_PAGE = 50;
+
+function pickDominantGenre(baseList) {
+  const counts = new Map();
+  for (const media of baseList) {
+    for (const genre of media.genres ?? []) {
+      counts.set(genre, (counts.get(genre) ?? 0) + 1);
+    }
+  }
+  let best = null;
+  let bestCount = 0;
+  for (const [genre, count] of counts) {
+    if (count > bestCount) {
+      best = genre;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+export async function fetchDiscoveryPick(baseList, favoritesList = [], excludeIds = [], rng = Math.random) {
+  const genre = pickDominantGenre(baseList);
+  if (!genre) return null;
+
+  const page = POPULARITY_OFFSET_PAGES + 1 + Math.floor(rng() * PAGE_RANGE);
+  const { media } = await browseCatalogue({
+    genre,
+    page,
+    perPage: PER_PAGE,
+    sort: ['POPULARITY_DESC'],
+  });
+
+  const excluded = new Set([...excludeIds, ...baseList.map((item) => item.id)]);
+  const candidates = media
+    .filter((item) => !excluded.has(item.id))
+    .map((item) => ({ media: item, score: scoreCandidate(item, baseList, favoritesList) }));
+
+  const { picked } = pickWeighted(candidates, 1, [], rng);
+  return picked[0]?.media ?? null;
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `npm test -- discovery.test.js`
+Expected: PASS
+
+- [ ] **Step 5: Commit discovery.js**
+
+```bash
+git add src/recommend/discovery.js src/recommend/discovery.test.js
+git commit -m "Add discovery pick for lesser-known but genre-relevant anime"
+```
+
+- [ ] **Step 6: Write the failing test for fetchRecommendationData returning a discovery pick**
+
+Add to `src/recommend/fetchRecommendationData.test.js` (new imports and mock alongside the existing ones):
+```js
+import { fetchDiscoveryPick } from './discovery.js';
+
+vi.mock('./discovery.js', () => ({
+  fetchDiscoveryPick: vi.fn(),
+}));
+```
+
+Add inside the existing `beforeEach`:
+```js
+fetchDiscoveryPick.mockReset().mockResolvedValue(null);
+```
+
+Add a new test case:
+```js
+it('includes the discovery pick returned by fetchDiscoveryPick', async () => {
+  getAnimeDetails.mockResolvedValue(baseMedia);
+  getAnimeRecommendations.mockResolvedValue([]);
+  getList.mockReturnValue([]);
+  fetchDiscoveryPick.mockResolvedValue({ id: 99, title: 'Obscure Anime' });
+
+  const { discoveryPick } = await fetchRecommendationData([1]);
+
+  expect(discoveryPick).toEqual({ id: 99, title: 'Obscure Anime' });
+});
+```
+
+- [ ] **Step 7: Run tests to verify the new test fails**
+
+Run: `npm test -- fetchRecommendationData.test.js`
+Expected: FAIL (`discoveryPick` is `undefined`, not the expected object).
+
+- [ ] **Step 8: Wire discoveryPick into fetchRecommendationData**
+
+`src/recommend/fetchRecommendationData.js`:
+```js
+import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
+import { buildCandidatePool } from './buildPool.js';
+import { fetchDiscoveryPick } from './discovery.js';
+import { getList } from '../storage/listStorage.js';
+
+const MAX_FAVORITES_FOR_SCORING = 10;
+
+export async function fetchRecommendationData(baseAnimeIds) {
+  if (!baseAnimeIds || baseAnimeIds.length === 0) {
+    throw new Error('base_vide');
+  }
+
+  const baseList = await Promise.all(baseAnimeIds.map((id) => getAnimeDetails(id)));
+  const recommendationLists = await Promise.all(
+    baseAnimeIds.map((id) => getAnimeRecommendations(id))
+  );
+  const recommendationNodes = recommendationLists.flat();
+
+  const localList = getList();
+  const excludeIds = localList
+    .filter((entry) => entry.status === 'vu' || entry.excluded)
+    .map((entry) => entry.animeId);
+
+  const favoriteIds = localList
+    .filter((entry) => entry.note === 'coup_de_coeur' && !baseAnimeIds.includes(entry.animeId))
+    .map((entry) => entry.animeId)
+    .slice(0, MAX_FAVORITES_FOR_SCORING);
+  const favoritesList = await Promise.all(favoriteIds.map((id) => getAnimeDetails(id)));
+
+  const pool = buildCandidatePool({ baseList, recommendationNodes, favoritesList, excludeIds });
+  const discoveryPick = await fetchDiscoveryPick(baseList, favoritesList, excludeIds);
+
+  return { pool, baseList, discoveryPick };
+}
+```
+
+- [ ] **Step 9: Run tests to verify they pass**
+
+Run: `npm test -- fetchRecommendationData.test.js`
+Expected: PASS
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add src/recommend/fetchRecommendationData.js src/recommend/fetchRecommendationData.test.js
+git commit -m "Include discovery pick in recommendation data"
+```
+
+- [ ] **Step 11: Write the failing Home test for the discovery card**
+
+Add to `src/pages/Home.test.jsx`:
+```jsx
+it('shows a bonus discovery suggestion alongside the main results', async () => {
+  fetchRecommendationData.mockResolvedValue({
+    pool: [{ media: candidate, score: 10 }],
+    baseList: [],
+    discoveryPick: { id: 50, title: 'Obscure Gem', genres: [], studios: [], coverImage: null },
+  });
+  getList.mockReturnValue([{ animeId: 1, status: 'vu' }]);
+  const user = userEvent.setup();
+
+  renderHome();
+  await user.click(screen.getByRole('button', { name: 'Selon mes vus' }));
+
+  await waitFor(() => expect(screen.getByText('Découverte')).toBeInTheDocument());
+  expect(screen.getByText('Obscure Gem')).toBeInTheDocument();
+});
+```
+
+- [ ] **Step 12: Run tests to verify the new test fails**
+
+Run: `npm test -- Home.test.jsx`
+Expected: FAIL (no "Découverte" heading rendered yet).
+
+- [ ] **Step 13: Render the discovery card in Home**
+
+In `src/pages/Home.jsx`, add a new state variable next to the others:
+```js
+const [discoveryPick, setDiscoveryPick] = useState(null);
+```
+
+Update `runRecommendation` to capture and store the pick:
+```js
+async function runRecommendation(baseAnimeIds) {
+  setLastBaseIds(baseAnimeIds);
+  setStatus('loading');
+  try {
+    const { pool: newPool, discoveryPick: pick } = await fetchRecommendationData(baseAnimeIds);
+    const { picked } = pickWeighted(newPool, 5);
+    setPool(newPool);
+    setShownIds(picked.map((entry) => entry.media.id));
+    setResults(picked);
+    setDiscoveryPick(pick);
+    setStatus('idle');
+  } catch (error) {
+    setStatus(error.message === 'base_vide' ? 'empty_base' : 'error');
+  }
+}
+```
+
+Render the bonus card after the results grid, before the "Voir d'autres" button:
+```jsx
+{discoveryPick && (
+  <div className="discovery-pick">
+    <h3>Découverte</h3>
+    <AnimeCard
+      anime={discoveryPick}
+      onAddSeen={handleAddSeen}
+      onExclude={handleExclude}
+      onClick={(anime) => navigate(`/anime/${anime.id}`)}
+    />
+  </div>
+)}
+```
+
+- [ ] **Step 14: Run tests to verify they pass**
+
+Run: `npm test -- Home.test.jsx`
+Expected: PASS
+
+- [ ] **Step 15: Commit**
+
+```bash
+git add src/pages/Home.jsx src/pages/Home.test.jsx
+git commit -m "Show bonus Découverte suggestion on the Home page"
+```
+
+---
+
+## Task 17: GitHub Pages deployment
 
 **Files:**
 - Create: `.github/workflows/deploy.yml`

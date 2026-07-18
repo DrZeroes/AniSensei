@@ -1,4 +1,5 @@
 import { HashRouter, Routes, Route, Link } from 'react-router-dom';
+import Home from './pages/Home.jsx';
 
 function App() {
   return (
@@ -11,7 +12,7 @@ function App() {
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<p>Bienvenue sur AniSensei.</p>} />
+          <Route path="/" element={<Home />} />
         </Routes>
       </main>
     </HashRouter>

@@ -159,7 +159,7 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>
@@ -2000,7 +2000,7 @@ import Home from './pages/Home.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>
@@ -2261,7 +2261,7 @@ import Catalogue from './pages/Catalogue.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>
@@ -2725,7 +2725,7 @@ import MyList from './pages/MyList.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>
@@ -3005,7 +3005,7 @@ import AnimeDetail from './pages/AnimeDetail.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>

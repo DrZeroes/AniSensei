@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import Catalogue from './pages/Catalogue.jsx';
 import MyList from './pages/MyList.jsx';
+import AnimeDetail from './pages/AnimeDetail.jsx';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/ma-liste" element={<MyList />} />
+          <Route path="/anime/:id" element={<AnimeDetail />} />
         </Routes>
       </main>
     </HashRouter>

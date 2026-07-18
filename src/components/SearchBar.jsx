@@ -15,18 +15,24 @@ function SearchBar({ onSelect }) {
       return undefined;
     }
 
+    let ignore = false;
     setStatus('loading');
     const timeoutId = setTimeout(async () => {
       try {
         const data = await searchAnime(term);
+        if (ignore) return;
         setResults(data);
         setStatus('idle');
       } catch {
+        if (ignore) return;
         setStatus('error');
       }
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      ignore = true;
+      clearTimeout(timeoutId);
+    };
   }, [term]);
 
   return (

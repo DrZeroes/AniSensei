@@ -56,4 +56,48 @@ describe('SearchBar', () => {
 
     await waitFor(() => expect(screen.getByText('Aucun anime trouvé.')).toBeInTheDocument());
   });
+
+  it('ignores stale responses from earlier searches', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Create two manually-controlled promises
+    let resolveFirst, resolveSecond;
+    const firstPromise = new Promise(resolve => { resolveFirst = resolve; });
+    const secondPromise = new Promise(resolve => { resolveSecond = resolve; });
+
+    // Set up mocked searchAnime to return different promises per call
+    searchAnime
+      .mockReturnValueOnce(firstPromise)
+      .mockReturnValueOnce(secondPromise);
+
+    render(<SearchBar onSelect={() => {}} />);
+    const input = screen.getByLabelText('Rechercher un anime');
+
+    // Type 'One' - will trigger first search after debounce
+    await user.type(input, 'One');
+
+    // Wait for first search to be called
+    await waitFor(() => expect(searchAnime).toHaveBeenCalledTimes(1));
+
+    // Type more to get 'One Piece' - will trigger second search after debounce
+    await user.type(input, ' Piece');
+
+    // Wait for second search to be called
+    await waitFor(() => expect(searchAnime).toHaveBeenCalledTimes(2));
+
+    // Now resolve the second (later) search first with its results
+    resolveSecond([{ id: 2, title: 'One Piece' }]);
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+
+    // Now resolve the first (earlier) search with different results
+    resolveFirst([{ id: 1, title: 'One' }]);
+
+    // Give React time to process any updates
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Verify that the final results still show 'One Piece' (from the second, later search)
+    // and not 'One' (from the first, stale search)
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.queryByText('One')).not.toBeInTheDocument();
+  });
 });

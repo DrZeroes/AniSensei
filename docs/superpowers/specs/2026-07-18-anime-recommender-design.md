@@ -29,6 +29,9 @@ Clé `animeAdvice.list`, tableau d'objets :
   "animeId": 21,
   "title": "One Piece",
   "coverImage": "https://...",
+  "genres": ["Action", "Adventure"],
+  "studios": ["Toei Animation"],
+  "seasonYear": 1999,
   "status": "vu",
   "note": "coup_de_coeur",
   "excluded": false,
@@ -38,6 +41,7 @@ Clé `animeAdvice.list`, tableau d'objets :
 }
 ```
 
+- `genres`, `studios`, `seasonYear` : copie locale (dénormalisée) des métadonnées AniList au moment de l'ajout, nécessaire pour trier "Ma liste" par genre/studio/année sans re-appeler l'API (garde l'écran utilisable hors ligne, cf. section 6).
 - `status`: `"a_voir"` | `"vu"` — exclusif.
 - `note`: `"coup_de_coeur"` | `"aime"` | `"pas_aime"` | `null` — optionnel, pertinent seulement si `status: "vu"`.
 - `excluded`: `boolean` — `true` = "ne plus recommander". Indépendant de `status` (un anime peut être exclu sans avoir été vu).

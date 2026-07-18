@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import App from './App.jsx';
 
 describe('App', () => {
-  it('renders the AnimeAdvice title', () => {
+  it('renders the AniSensei title', () => {
     render(<App />);
-    expect(screen.getByText('AnimeAdvice')).toBeInTheDocument();
+    expect(screen.getByText('AniSensei')).toBeInTheDocument();
   });
 });

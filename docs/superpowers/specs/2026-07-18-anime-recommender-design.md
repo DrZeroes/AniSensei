@@ -1,4 +1,4 @@
-# AnimeAdvice — Design v1
+# AniSensei — Design v1
 
 ## 1. Objectif
 
@@ -16,13 +16,19 @@ Application front-end pure : **React + Vite**, déployée en site statique sur *
 - **localStorage** stocke la liste personnelle de l'utilisateur (voir schéma en section 3), persistante par navigateur.
 - **Export/Import JSON** de la liste personnelle, pour sauvegarde ou migration manuelle entre navigateurs/appareils.
 
+### Conformité aux conditions d'utilisation d'AniList
+
+- Usage non commercial, pas de clé API, pas de stockage massif/hoarding des données AniList : l'app ne fait que des appels ciblés (recherche, détails, recommandations, catalogue paginé à la demande) et ne recopie jamais la base AniList en local — seule la liste personnelle de l'utilisateur (quelques champs par anime, pas les données complètes) est stockée.
+- Nom "AniSensei" : n'utilise pas "AniList" ni "AniChart" dans le titre, donc pas soumis à l'obligation d'ajouter "UNOFFICIAL"/"for AniList" — mais on ajoutera quand même une mention "non affilié à AniList" dans le README/pied de page par courtoisie.
+- ⚠️ Point de vigilance : les CGU d'AniList interdisent les services concurrents non complémentaires de même nature (listes/trackers d'anime), sauf s'ils offrent une intégration/synchronisation significative et durable avec les comptes AniList. La v1 (liste 100% locale, sans compte AniList) ressemble à un tracker indépendant et pourrait tomber sous cette clause si l'usage dépasse le cadre personnel/expérimental. La v2 envisagée (comptes + sync AniList, cf. section "Migration future") irait dans le sens de la conformité. À garder en tête si le projet est un jour partagé publiquement à plus grande échelle.
+
 ### Migration future (hors scope v1)
 
 La couche d'accès aux données locales sera isolée dans un module dédié (ex: `storage.js` exposant `getList()`, `saveAnime()`, `removeAnime()`, etc.). Une future v2 avec comptes utilisateurs + base de données pourra remplacer l'implémentation interne de ce module par des appels à un backend, sans impacter les composants React ni l'algorithme de recommandation.
 
 ## 3. Modèle de données (localStorage)
 
-Clé `animeAdvice.list`, tableau d'objets :
+Clé `aniSensei.list`, tableau d'objets :
 
 ```json
 {

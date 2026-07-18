@@ -75,4 +75,57 @@ describe('Catalogue', () => {
 
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
   });
+
+  it('replaces results (instead of appending) when a filter changes', async () => {
+    browseCatalogue
+      .mockResolvedValueOnce({ media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }], hasNextPage: false })
+      .mockResolvedValue({ media: [{ id: 2, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText('Filtrer par genre'), 'Action');
+
+    await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+  });
+
+  it('shows the list badge for anime already present in the local list', async () => {
+    getList.mockReset().mockReturnValue([{ animeId: 1, status: 'vu', note: null, excluded: false }]);
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+
+    renderCatalogue();
+
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+    expect(screen.getByText('Vu')).toBeInTheDocument();
+  });
+
+  it('disables "Charger plus" while a fetch is in flight and ignores a second rapid click', async () => {
+    let resolveSecondPage;
+    const secondPagePromise = new Promise((resolve) => {
+      resolveSecondPage = resolve;
+    });
+    browseCatalogue
+      .mockResolvedValueOnce({ media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }], hasNextPage: true })
+      .mockImplementationOnce(() => secondPagePromise);
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+
+    const loadMoreButton = screen.getByRole('button', { name: 'Charger plus' });
+    await user.click(loadMoreButton);
+
+    expect(loadMoreButton).toBeDisabled();
+    await user.click(loadMoreButton);
+
+    resolveSecondPage({ media: [{ id: 2, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
+    await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
+
+    expect(browseCatalogue).toHaveBeenCalledTimes(2);
+  });
 });

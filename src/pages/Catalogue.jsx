@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard.jsx';
 import { browseCatalogue } from '../api/queries.js';
@@ -20,8 +20,10 @@ function Catalogue() {
   const [media, setMedia] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [status, setStatus] = useState('idle');
+  const requestIdRef = useRef(0);
 
   async function loadPage(targetPage, replace) {
+    const requestId = ++requestIdRef.current;
     setStatus('loading');
     try {
       const result = await browseCatalogue({
@@ -30,10 +32,12 @@ function Catalogue() {
         year: year ? Number(year) : null,
         sort: [sort],
       });
+      if (requestIdRef.current !== requestId) return; // a newer request has since been issued; discard this stale response
       setMedia((prev) => (replace ? result.media : [...prev, ...result.media]));
       setHasNextPage(result.hasNextPage);
       setStatus(result.media.length === 0 && replace ? 'empty' : 'idle');
     } catch {
+      if (requestIdRef.current !== requestId) return;
       setStatus('error');
     }
   }
@@ -45,6 +49,7 @@ function Catalogue() {
   }, [genre, year, sort]);
 
   function handleLoadMore() {
+    if (status === 'loading') return;
     const nextPage = page + 1;
     setPage(nextPage);
     loadPage(nextPage, false);

@@ -2,7 +2,7 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
         <h1>AnimeAdvice</h1>
         <nav>

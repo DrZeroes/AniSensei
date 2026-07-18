@@ -67,6 +67,15 @@ Trois déclencheurs possibles :
 5. Tirer aléatoirement 5 résultats parmi le pool, pondérés par pertinence (les mieux classés ont plus de chances d'apparaître).
 6. Un bouton **"Voir d'autres"** retire 5 nouveaux résultats depuis le même pool sans tout recalculer. Si le pool est épuisé, un nouveau pool est recalculé.
 
+### Suggestion "Découverte" (bonus)
+
+En plus des 5 suggestions principales, chaque recommandation (peu importe le déclencheur) inclut automatiquement une 6ème carte "Découverte" : un anime peu connu mais cohérent avec les genres dominants des animes de base.
+
+- "Peu connu" = filtré hors des ~500 animes les plus populaires du genre concerné (pagination AniList au-delà des toutes premières pages triées par popularité).
+- Reste pertinent : le candidat est piochée parmi ce sous-ensemble puis pondéré par la même similarité de genres/tags/studios que le pool principal (pas un pur tirage aléatoire) — évite par exemple de proposer un anime pour enfants si les animes de base sont plutôt seinen/action.
+- Exclut également tout anime déjà présent dans la liste personnelle.
+- Si aucun candidat pertinent n'est trouvé (ex: base sans genre exploitable), la carte "Découverte" n'apparaît simplement pas.
+
 ### Cas limite
 
 Si la base est vide (ex: "Selon mes vus" cliqué sans aucun anime marqué vu), afficher un message invitant à ajouter des animes d'abord plutôt que de lancer une recherche vide.
@@ -74,7 +83,7 @@ Si la base est vide (ex: "Selon mes vus" cliqué sans aucun anime marqué vu), a
 ## 5. Écrans
 
 ### Accueil / Recommandation
-Zone de recherche (autocomplete AniList) pour saisir 1+ animes, ou boutons "Selon mes vus" / "Selon mes coups de cœur". Affiche 5 cartes résultats (cover, titre, genres, synopsis court, lien vers la fiche) avec actions rapides : ajouter à ma liste (à voir/vu), marquer déjà vu, ne plus recommander. Bouton "Voir d'autres".
+Zone de recherche (autocomplete AniList) pour saisir 1+ animes, ou boutons "Selon mes vus" / "Selon mes coups de cœur". Affiche 5 cartes résultats (cover, titre, genres, synopsis court, lien vers la fiche) avec actions rapides : ajouter à ma liste (à voir/vu), marquer déjà vu, ne plus recommander. Bouton "Voir d'autres". Une 6ème carte distincte "Découverte" (voir section 4) apparaît en bonus avec les mêmes actions rapides.
 
 ### Catalogue
 Parcourt tout le catalogue AniList, avec chargement dynamique (infinite scroll / "charger plus") pour limiter la consommation de données. Filtres : genre, année, studio, format. Tri : score, popularité, année, titre. Chaque carte affiche un badge si l'anime est déjà présent dans la liste personnelle (avec son statut/note).

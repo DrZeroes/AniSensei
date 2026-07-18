@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
@@ -13,17 +13,23 @@ function AnimeDetail() {
   const [similar, setSimilar] = useState([]);
   const [status, setStatus] = useState('loading');
   const [entry, setEntry] = useState(null);
+  const requestIdRef = useRef(0);
 
   function loadData() {
+    const requestId = ++requestIdRef.current;
     setStatus('loading');
     Promise.all([getAnimeDetails(Number(id)), getAnimeRecommendations(Number(id))])
       .then(([data, recommendations]) => {
+        if (requestIdRef.current !== requestId) return; // a newer request has since been issued; discard this stale response
         setAnime(data);
         setSimilar(recommendations.map((node) => node.media));
         setEntry(getList().find((item) => item.animeId === Number(id)) ?? null);
         setStatus('idle');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => {
+        if (requestIdRef.current !== requestId) return;
+        setStatus('error');
+      });
   }
 
   useEffect(() => {

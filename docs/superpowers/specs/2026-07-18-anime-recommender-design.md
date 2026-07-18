@@ -109,3 +109,4 @@ Accessible en cliquant sur un anime depuis n'importe quel écran (accueil, catal
 - Comptes utilisateurs et authentification.
 - Backend / base de données (voir section "Migration future").
 - Application mobile native.
+- **Système d'amis** (voir un profil ami, comparer les listes, recommandations basées sur les goûts d'un ami) — envisagé pour la v2, une fois comptes + base de données en place. Nécessitera un modèle de données relationnel (utilisateurs, relations d'amitié) côté backend.

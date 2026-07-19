@@ -3,13 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MyList from './MyList.jsx';
-import { getList, upsertAnime, removeAnime } from '../storage/listStorage.js';
+import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
+import { getAnimeDetails } from '../api/queries.js';
 
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(),
   saveList: vi.fn(),
   upsertAnime: vi.fn(),
   removeAnime: vi.fn(),
+}));
+vi.mock('../api/queries.js', () => ({
+  getAnimeDetails: vi.fn(),
 }));
 
 const entry = {
@@ -37,8 +41,10 @@ function renderMyList() {
 describe('MyList', () => {
   beforeEach(() => {
     getList.mockReset().mockReturnValue([entry]);
+    saveList.mockReset();
     upsertAnime.mockReset();
     removeAnime.mockReset().mockReturnValue([]);
+    getAnimeDetails.mockReset();
   });
 
   it('renders entries from the stored list', () => {
@@ -114,6 +120,29 @@ describe('MyList', () => {
 
     const titles = screen.getAllByRole('button', { name: /Zelda Anime|Attack on Titan|One Piece/ });
     expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);
+  });
+
+  it('backfills tags from AniList for entries added before tags were tracked', async () => {
+    const entryWithoutTags = { ...entry, tags: undefined };
+    getList.mockReturnValue([entryWithoutTags]);
+    getAnimeDetails.mockResolvedValue({ tags: ['Pirates', 'Time Skip'] });
+
+    renderMyList();
+
+    await waitFor(() => expect(getAnimeDetails).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(saveList).toHaveBeenCalled());
+
+    // The backfilled tag is now offered as a filter option.
+    expect(screen.getByRole('option', { name: 'Time Skip' })).toBeInTheDocument();
+  });
+
+  it('does not re-fetch details for entries that already have tags (even an empty list)', async () => {
+    getList.mockReturnValue([{ ...entry, tags: [] }]);
+
+    renderMyList();
+    await waitFor(() => screen.getByText('One Piece'));
+
+    expect(getAnimeDetails).not.toHaveBeenCalled();
   });
 
   it('filters the visible list by genre, studio, and tag, offering only values present in the list', async () => {

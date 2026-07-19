@@ -136,15 +136,17 @@ describe('Catalogue', () => {
     ]);
   });
 
-  it('adds a tag typed as an exact match on Enter, clears the input, and lets it be removed', async () => {
+  it('commits a tag as soon as it becomes an exact match, with no Enter keypress needed', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
 
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
+    // Simulates picking "Time Skip" from the native datalist suggestions (which
+    // fills the input the same way typing it by hand would) — no {Enter} here.
     const tagInput = screen.getByLabelText('Ajouter un tag');
-    await user.type(tagInput, 'Time Skip{Enter}');
+    await user.type(tagInput, 'Time Skip');
 
     expect(tagInput).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Retirer le tag Time Skip' })).toBeInTheDocument();
@@ -162,14 +164,14 @@ describe('Catalogue', () => {
     );
   });
 
-  it('does not add anything when Enter is pressed without an exact tag match', async () => {
+  it('does not add anything for a partial or non-matching tag query', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
 
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
-    await user.type(screen.getByLabelText('Ajouter un tag'), 'not a real tag{Enter}');
+    await user.type(screen.getByLabelText('Ajouter un tag'), 'not a real tag');
 
     expect(screen.queryByRole('button', { name: /Retirer le tag/ })).not.toBeInTheDocument();
     expect(browseCatalogue).toHaveBeenCalledTimes(1); // no re-fetch triggered

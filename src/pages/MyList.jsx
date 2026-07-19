@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
+import { getAnimeDetails } from '../api/queries.js';
 import {
   serializeList,
   parseImportedList,
@@ -92,6 +93,37 @@ function MyList() {
       return String(aValue).localeCompare(String(bValue));
     });
   }, [list, activeTab, sortField, genreFilter, studioFilter, tagFilter]);
+
+  // Entries added before tags were tracked have no `tags` field at all (unlike
+  // genres/studios, which were always stored) — backfill them from AniList once
+  // so the tag filter/sort actually cover the whole list, not just recent adds.
+  useEffect(() => {
+    const missingTags = list.filter((entry) => entry.tags === undefined);
+    if (missingTags.length === 0) return undefined;
+
+    let cancelled = false;
+    Promise.all(
+      missingTags.map((entry) =>
+        getAnimeDetails(entry.animeId)
+          .then((details) => ({ animeId: entry.animeId, tags: details.tags }))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const fetched = results.filter(Boolean);
+      if (fetched.length === 0) return;
+      let updated = getList();
+      for (const { animeId, tags } of fetched) {
+        updated = updated.map((entry) => (entry.animeId === animeId ? { ...entry, tags } : entry));
+      }
+      saveList(updated);
+      setList(updated);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [list]);
 
   function updateEntry(animeId, changes) {
     const updated = upsertAnime({ animeId, ...changes });

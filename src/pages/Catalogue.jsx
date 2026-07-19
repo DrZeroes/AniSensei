@@ -73,13 +73,17 @@ function Catalogue() {
   }
 
   // Combobox: the datalist below handles suggesting/autocompleting as the user
-  // types (native browser behaviour) — committing a tag just needs an exact
-  // match, whether typed by hand or filled in by picking a suggestion.
-  function handleTagInputKeyDown(event) {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    const match = availableTags.find((tag) => tag.toLowerCase() === tagQuery.trim().toLowerCase());
-    if (match) addTag(match);
+  // types (native browser behaviour). As soon as the value is an exact tag
+  // match — whether picked from the suggestion list or typed by hand — it's
+  // committed immediately, no Enter keypress required.
+  function handleTagQueryChange(event) {
+    const value = event.target.value;
+    const match = availableTags.find((tag) => tag.toLowerCase() === value.trim().toLowerCase());
+    if (match) {
+      addTag(match);
+    } else {
+      setTagQuery(value);
+    }
   }
 
   function handleLoadMore() {
@@ -165,8 +169,7 @@ function Catalogue() {
             type="text"
             list="tag-options"
             value={tagQuery}
-            onChange={(event) => setTagQuery(event.target.value)}
-            onKeyDown={handleTagInputKeyDown}
+            onChange={handleTagQueryChange}
             placeholder="Ajouter un tag..."
             aria-label="Ajouter un tag"
           />

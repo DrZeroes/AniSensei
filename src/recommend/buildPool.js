@@ -10,6 +10,7 @@ export function buildCandidatePool({ baseList, recommendationNodes, favoritesLis
   for (const node of recommendationNodes) {
     const { media, rating } = node;
     if (excluded.has(media.id)) continue;
+    if (media.status === 'NOT_YET_RELEASED') continue;
 
     const score = scoreCandidate(media, baseList, favoritesList) + rating * RATING_WEIGHT;
 

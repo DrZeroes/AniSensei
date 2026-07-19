@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchRecommendationData } from './fetchRecommendationData.js';
-import { getAnimeDetails, getAnimeRecommendations, browseCatalogue } from '../api/queries.js';
+import { getAnimeDetails, getAnimeRecommendations, getAnimeRelations, browseCatalogue } from '../api/queries.js';
 import { getList } from '../storage/listStorage.js';
 import { fetchDiscoveryPick } from './discovery.js';
 
 vi.mock('../api/queries.js', () => ({
   getAnimeDetails: vi.fn(),
   getAnimeRecommendations: vi.fn(),
+  getAnimeRelations: vi.fn(),
   browseCatalogue: vi.fn(),
 }));
 
@@ -27,6 +28,7 @@ describe('fetchRecommendationData', () => {
   beforeEach(() => {
     getAnimeDetails.mockReset();
     getAnimeRecommendations.mockReset();
+    getAnimeRelations.mockReset().mockResolvedValue([]);
     getList.mockReset();
     browseCatalogue.mockReset().mockResolvedValue({ media: [], hasNextPage: false });
     fetchDiscoveryPick.mockReset().mockResolvedValue(null);
@@ -102,5 +104,30 @@ describe('fetchRecommendationData', () => {
     await fetchRecommendationData([1]);
 
     expect(browseCatalogue).not.toHaveBeenCalled();
+  });
+
+  it('includes franchise relations (prequels/sequels) and ranks them above generic recommendations', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([{ rating: 5, media: recommended }]);
+    const sequel = { id: 40, genres: ['Action'], studios: ['Ufotable'] };
+    getAnimeRelations.mockResolvedValue([sequel]);
+    getList.mockReturnValue([]);
+
+    const { pool } = await fetchRecommendationData([1]);
+
+    expect(getAnimeRelations).toHaveBeenCalledWith(1);
+    expect(pool[0].media.id).toBe(40);
+  });
+
+  it('does not recommend a franchise relation the user has already watched', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([]);
+    const sequel = { id: 40, genres: ['Action'], studios: ['Ufotable'] };
+    getAnimeRelations.mockResolvedValue([sequel]);
+    getList.mockReturnValue([{ animeId: 40, status: 'vu', note: null, excluded: false }]);
+
+    const { pool } = await fetchRecommendationData([1]);
+
+    expect(pool.map((entry) => entry.media.id)).not.toContain(40);
   });
 });

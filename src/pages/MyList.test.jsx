@@ -68,6 +68,19 @@ describe('MyList', () => {
     expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
   });
 
+  it('sorts entries alphabetically by title by default', () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 2, title: 'Zelda Anime' },
+      { ...entry, animeId: 3, title: 'Attack on Titan' },
+      entry, // 'One Piece'
+    ]);
+
+    renderMyList();
+
+    const titles = screen.getAllByRole('button', { name: /Zelda Anime|Attack on Titan|One Piece/ });
+    expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);
+  });
+
   it('removes an entry when "Supprimer" is clicked', async () => {
     const user = userEvent.setup();
     renderMyList();

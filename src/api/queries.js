@@ -9,16 +9,19 @@ function mapMediaSummary(media) {
     averageScore: media.averageScore ?? null,
     seasonYear: media.seasonYear ?? null,
     format: media.format ?? null,
+    status: media.status ?? null,
     studios: (media.studios?.nodes ?? []).map((studio) => studio.name),
   };
 }
 
 const searchCache = new Map();
 const detailsCache = new Map();
+let genreCollectionCache = null;
 
 export function clearQueryCache() {
   searchCache.clear();
   detailsCache.clear();
+  genreCollectionCache = null;
 }
 
 const SEARCH_QUERY = `
@@ -32,6 +35,7 @@ const SEARCH_QUERY = `
         averageScore
         seasonYear
         format
+        status
         studios { nodes { name } }
       }
     }
@@ -59,6 +63,7 @@ const DETAILS_QUERY = `
       averageScore
       seasonYear
       format
+      status
       episodes
       staff(perPage: 5) {
         edges { role node { name { full } } }
@@ -99,6 +104,7 @@ const RECOMMENDATIONS_QUERY = `
             averageScore
             seasonYear
             format
+            status
             studios { nodes { name } }
           }
         }
@@ -117,6 +123,41 @@ export async function getAnimeRecommendations(id) {
     }));
 }
 
+const RELATIONS_QUERY = `
+  query ($id: Int) {
+    Media(id: $id, type: ANIME) {
+      relations {
+        edges {
+          relationType(version: 2)
+          node {
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            genres
+            averageScore
+            seasonYear
+            format
+            status
+            studios { nodes { name } }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// Franchise-relevant relation types — the ones a viewer would realistically want
+// recommended next. Excludes ADAPTATION/SOURCE/CHARACTER/COMPILATION/OTHER/SUMMARY.
+const FRANCHISE_RELATION_TYPES = new Set(['PREQUEL', 'SEQUEL', 'PARENT', 'SIDE_STORY', 'ALTERNATIVE']);
+
+export async function getAnimeRelations(id) {
+  const data = await anilistQuery(RELATIONS_QUERY, { id });
+  return (data.Media.relations?.edges ?? [])
+    .filter((edge) => edge.node.type === 'ANIME' && FRANCHISE_RELATION_TYPES.has(edge.relationType))
+    .map((edge) => mapMediaSummary(edge.node));
+}
+
 const CATALOGUE_QUERY = `
   query ($page: Int, $perPage: Int, $genres: [String], $year: Int, $format: MediaFormat, $sort: [MediaSort]) {
     Page(page: $page, perPage: $perPage) {
@@ -124,6 +165,7 @@ const CATALOGUE_QUERY = `
       media(
         type: ANIME
         isAdult: false
+        status_not: NOT_YET_RELEASED
         genre_in: $genres
         seasonYear: $year
         format: $format
@@ -136,6 +178,7 @@ const CATALOGUE_QUERY = `
         averageScore
         seasonYear
         format
+        status
         studios { nodes { name } }
       }
     }
@@ -159,7 +202,10 @@ export async function browseCatalogue({
     format,
     sort,
   });
-  let media = data.Page.media.map(mapMediaSummary);
+  let media = data.Page.media
+    .map(mapMediaSummary)
+    // Defensive client-side filter in case status_not ever misbehaves server-side.
+    .filter((item) => item.status !== 'NOT_YET_RELEASED');
   if (studio) {
     media = media.filter((item) => item.studios.includes(studio));
   }
@@ -167,4 +213,43 @@ export async function browseCatalogue({
     media,
     hasNextPage: data.Page.pageInfo.hasNextPage,
   };
+}
+
+const GENRE_COLLECTION_QUERY = `
+  query {
+    GenreCollection
+  }
+`;
+
+const FALLBACK_GENRES = [
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Drama',
+  'Ecchi',
+  'Fantasy',
+  'Horror',
+  'Mahou Shoujo',
+  'Mecha',
+  'Music',
+  'Mystery',
+  'Psychological',
+  'Romance',
+  'Sci-Fi',
+  'Slice of Life',
+  'Sports',
+  'Supernatural',
+  'Thriller',
+];
+
+export async function getGenreCollection() {
+  if (genreCollectionCache) return genreCollectionCache;
+  try {
+    const data = await anilistQuery(GENRE_COLLECTION_QUERY);
+    const genres = (data.GenreCollection ?? []).filter((genre) => genre !== 'Hentai');
+    genreCollectionCache = genres.length > 0 ? genres : FALLBACK_GENRES;
+  } catch {
+    genreCollectionCache = FALLBACK_GENRES;
+  }
+  return genreCollectionCache;
 }

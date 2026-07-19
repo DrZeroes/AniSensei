@@ -19,6 +19,11 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'À propos' })).toBeInTheDocument();
   });
 
+  it('renders a link to the Stats page', () => {
+    render(<App />);
+    expect(screen.getByRole('link', { name: 'Mes stats' })).toBeInTheDocument();
+  });
+
   it('toggles the theme when the theme button is clicked', async () => {
     const user = userEvent.setup();
     render(<App />);

@@ -5,6 +5,7 @@ import Catalogue from './pages/Catalogue.jsx';
 import MyList from './pages/MyList.jsx';
 import AnimeDetail from './pages/AnimeDetail.jsx';
 import About from './pages/About.jsx';
+import Stats from './pages/Stats.jsx';
 import VersionBadge from './components/VersionBadge.jsx';
 
 const THEME_KEY = 'aniSensei.theme';
@@ -40,6 +41,7 @@ function App() {
           </NavLink>
           <NavLink to="/catalogue">Catalogue</NavLink>
           <NavLink to="/ma-liste">Ma liste</NavLink>
+          <NavLink to="/stats">Mes stats</NavLink>
           <NavLink to="/apropos">À propos</NavLink>
           <button
             type="button"
@@ -57,6 +59,7 @@ function App() {
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/ma-liste" element={<MyList />} />
           <Route path="/anime/:id" element={<AnimeDetail />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/apropos" element={<About />} />
         </Routes>
       </main>

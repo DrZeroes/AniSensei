@@ -3,7 +3,7 @@ import { searchAnime } from '../api/queries.js';
 
 const DEBOUNCE_MS = 300;
 
-function SearchBar({ onSelect }) {
+function SearchBar({ onSelect, onQuickAddSeen }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle'); // idle | loading | error
@@ -40,6 +40,11 @@ function SearchBar({ onSelect }) {
     setTerm('');
   }
 
+  function handleQuickAddSeen(anime) {
+    onQuickAddSeen(anime);
+    setTerm('');
+  }
+
   return (
     <div className="search-bar">
       <input
@@ -57,9 +62,20 @@ function SearchBar({ onSelect }) {
         <ul>
           {results.map((anime) => (
             <li key={anime.id}>
-              <button type="button" onClick={() => handleSelect(anime)}>
+              <button type="button" className="search-bar__title" onClick={() => handleSelect(anime)}>
                 {anime.title}
               </button>
+              {onQuickAddSeen && (
+                <button
+                  type="button"
+                  className="search-bar__quick-add"
+                  onClick={() => handleQuickAddSeen(anime)}
+                  aria-label={`Marquer ${anime.title} comme vu`}
+                  title="Ajouter directement à mes animes vus"
+                >
+                  + Vu
+                </button>
+              )}
             </li>
           ))}
         </ul>

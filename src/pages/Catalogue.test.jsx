@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Catalogue from './Catalogue.jsx';
-import { browseCatalogue } from '../api/queries.js';
+import { browseCatalogue, getGenreCollection } from '../api/queries.js';
 import { getList } from '../storage/listStorage.js';
 
 vi.mock('../api/queries.js', () => ({
   browseCatalogue: vi.fn(),
+  getGenreCollection: vi.fn(),
 }));
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(() => []),
@@ -24,6 +25,7 @@ function renderCatalogue() {
 describe('Catalogue', () => {
   beforeEach(() => {
     browseCatalogue.mockReset();
+    getGenreCollection.mockReset().mockResolvedValue(['Action', 'Comedy']);
     getList.mockReset().mockReturnValue([]);
   });
 
@@ -85,7 +87,7 @@ describe('Catalogue', () => {
     renderCatalogue();
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
 
-    await user.click(screen.getByLabelText('Action'));
+    await user.click(await screen.findByLabelText('Action'));
 
     await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
     expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
@@ -98,7 +100,7 @@ describe('Catalogue', () => {
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByLabelText('Action'));
+    await user.click(await screen.findByLabelText('Action'));
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ genres: ['Action'] }))
     );

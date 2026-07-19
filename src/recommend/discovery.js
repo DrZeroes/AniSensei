@@ -2,10 +2,14 @@ import { browseCatalogue } from '../api/queries.js';
 import { scoreCandidate } from './scoring.js';
 import { pickWeighted } from './pickResults.js';
 
-const DEEP_OFFSET_PAGES = 10; // ~top 500-1000 most popular (perPage 50 * 10 pages)
-const MID_OFFSET_PAGES = 2; // ~top 100-600 most popular
-const TOP_OFFSET_PAGES = 0; // ~top 1-500 most popular — last-resort tier, used only so a pick is never missing
-const PAGE_RANGE = 10;
+// Tier 1: a wide, randomized window within the dominant genre (roughly ranks
+// 51-1000), landing on a hidden gem in the common case with a single request.
+const GENRE_TIER_OFFSET_PAGES = 1;
+const GENRE_TIER_PAGE_RANGE = 19;
+// Tier 2 (fallback only): top ~500 most popular overall, virtually guaranteed
+// to have something — keeps the "never missing" guarantee to at most 2 requests.
+const FALLBACK_TIER_OFFSET_PAGES = 0;
+const FALLBACK_TIER_PAGE_RANGE = 10;
 const PER_PAGE = 50;
 
 export function pickDominantGenre(baseList) {
@@ -26,8 +30,8 @@ export function pickDominantGenre(baseList) {
   return best;
 }
 
-async function fetchUsableMedia(genre, offsetPages, excluded, rng) {
-  const page = offsetPages + 1 + Math.floor(rng() * PAGE_RANGE);
+async function fetchUsableMedia(genre, offsetPages, pageRange, excluded, rng) {
+  const page = offsetPages + 1 + Math.floor(rng() * pageRange);
   try {
     const { media } = await browseCatalogue({
       genres: genre ? [genre] : [],
@@ -45,18 +49,12 @@ export async function fetchDiscoveryPick(baseList, favoritesList = [], excludeId
   const excluded = new Set([...excludeIds, ...baseList.map((item) => item.id)]);
   const genre = pickDominantGenre(baseList);
 
-  // Ordered fallback tiers: prefer a hidden gem in the dominant genre, then widen the
-  // popularity window, then drop the genre filter entirely — so a Découverte pick is
-  // (practically) never missing, even if the exact genre has few catalogued entries.
-  const tiers = [DEEP_OFFSET_PAGES, MID_OFFSET_PAGES, TOP_OFFSET_PAGES];
-  const attempts = genre
-    ? [...tiers.map((offset) => [genre, offset]), ...tiers.map((offset) => [null, offset])]
-    : tiers.map((offset) => [null, offset]);
+  let usable = genre
+    ? await fetchUsableMedia(genre, GENRE_TIER_OFFSET_PAGES, GENRE_TIER_PAGE_RANGE, excluded, rng)
+    : [];
 
-  let usable = [];
-  for (const [genreFilter, offsetPages] of attempts) {
-    usable = await fetchUsableMedia(genreFilter, offsetPages, excluded, rng);
-    if (usable.length > 0) break;
+  if (usable.length === 0) {
+    usable = await fetchUsableMedia(null, FALLBACK_TIER_OFFSET_PAGES, FALLBACK_TIER_PAGE_RANGE, excluded, rng);
   }
 
   if (usable.length === 0) return null;

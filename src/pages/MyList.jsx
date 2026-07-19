@@ -11,7 +11,15 @@ import {
 
 const STATUS_OPTIONS = ['a_voir', 'vu'];
 const NOTE_OPTIONS = ['coup_de_coeur', 'aime', 'pas_aime'];
-const SORT_FIELDS = ['note', 'seasonYear', 'genres', 'studios'];
+const SORT_FIELDS = ['title', 'note', 'seasonYear', 'genres', 'studios', 'addedAt'];
+const SORT_LABELS = {
+  title: 'Titre (A-Z)',
+  note: 'Note',
+  seasonYear: 'Année',
+  genres: 'Genre',
+  studios: 'Studio',
+  addedAt: "Date d'ajout",
+};
 
 const STATUS_LABELS = { a_voir: 'À voir', vu: 'Vu ✓' };
 const NOTE_LABELS = {
@@ -30,7 +38,7 @@ function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
   const [activeTab, setActiveTab] = useState('vus');
-  const [sortField, setSortField] = useState('addedAt');
+  const [sortField, setSortField] = useState('title');
   const [pendingImport, setPendingImport] = useState(null);
 
   const visibleList = useMemo(() => {
@@ -112,10 +120,9 @@ function MyList() {
 
       <div className="my-list-controls">
         <select value={sortField} onChange={(event) => setSortField(event.target.value)} aria-label="Trier par">
-          <option value="addedAt">Date d'ajout</option>
           {SORT_FIELDS.map((field) => (
             <option key={field} value={field}>
-              {field}
+              {SORT_LABELS[field]}
             </option>
           ))}
         </select>

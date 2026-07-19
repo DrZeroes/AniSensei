@@ -200,7 +200,9 @@ button:focus-visible {
 .search-bar ul {
   list-style: none;
   margin: 0.25rem 0 0;
-  padding: 0.25rem;
+  padding: 0.3rem;
+  width: max-content;
+  min-width: 260px;
   max-width: 420px;
   max-height: 320px;
   overflow-y: auto;
@@ -216,21 +218,44 @@ button:focus-visible {
     top: 0;
     left: 100%;
     margin: 0 0 0 0.6rem;
+    max-width: 480px;
     z-index: 15;
   }
 }
 
-.search-bar li button {
+.search-bar li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.search-bar__title {
   display: block;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: left;
   border: none;
   background: none;
   border-radius: 8px;
+  white-space: normal;
 }
 
-.search-bar li button:hover {
+.search-bar__title:hover {
   background: var(--bg-elevated-2);
+}
+
+.search-bar__quick-add {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--success);
+  border-color: var(--success);
+  background: var(--bg-elevated-2);
+}
+
+.search-bar__quick-add:hover {
+  background: var(--success);
+  color: var(--bg);
 }
 
 /* Genre filter */
@@ -556,7 +581,7 @@ button:focus-visible {
 @keyframes card-reveal {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.92);
+    transform: translateY(28px) scale(0.88);
   }
   to {
     opacity: 1;
@@ -565,14 +590,14 @@ button:focus-visible {
 }
 
 .results-grid .anime-card {
-  animation: card-reveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: card-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .results-grid .anime-card:nth-child(1) { animation-delay: 0ms; }
-.results-grid .anime-card:nth-child(2) { animation-delay: 90ms; }
-.results-grid .anime-card:nth-child(3) { animation-delay: 180ms; }
-.results-grid .anime-card:nth-child(4) { animation-delay: 270ms; }
-.results-grid .anime-card:nth-child(5) { animation-delay: 360ms; }
+.results-grid .anime-card:nth-child(2) { animation-delay: 120ms; }
+.results-grid .anime-card:nth-child(3) { animation-delay: 240ms; }
+.results-grid .anime-card:nth-child(4) { animation-delay: 360ms; }
+.results-grid .anime-card:nth-child(5) { animation-delay: 480ms; }
 
 .discovery-pick {
   margin-top: 1.5rem;
@@ -630,8 +655,8 @@ button:focus-visible {
     linear-gradient(120deg, #ffd76a, var(--accent-2), var(--accent), #ffd76a);
   background-origin: border-box;
   background-clip: padding-box, border-box;
-  animation: card-reveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 550ms both, shiny-pop 0.7s ease 550ms both,
-    shiny-border 1.8s ease-in-out infinite 1.2s;
+  animation: card-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 700ms both, shiny-pop 0.8s ease 700ms both,
+    shiny-border 1.8s ease-in-out infinite 1.4s;
 }
 
 /* The shine sweep is clipped to the cover image (not the whole card) so the
@@ -644,13 +669,21 @@ button:focus-visible {
   width: 55%;
   height: 200%;
   background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-  animation: shiny-sweep 2.4s ease-in-out infinite 1.3s;
+  animation: shiny-sweep 2.4s ease-in-out infinite 1.5s;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .results-grid .anime-card,
-  .discovery-pick .anime-card,
+  /* Keep a near-instant fade so appearing results are still noticeable, but drop
+     the large transform/scale motion and the two continuously looping effects. */
+  .results-grid .anime-card {
+    animation-duration: 0.01ms !important;
+  }
+
+  .discovery-pick .anime-card {
+    animation: card-reveal 0.01ms 700ms both !important;
+  }
+
   .discovery-pick .anime-card__cover::after {
     animation: none !important;
   }
@@ -869,6 +902,117 @@ button:focus-visible {
 .version-badge__date {
   color: var(--accent-2);
   font-weight: 600;
+}
+
+/* Stats page */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-tile {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stat-tile__value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stat-tile__label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.stats-breakdown {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.9rem;
+}
+
+.stats-breakdown__toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0.65rem 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.stats-breakdown__toggle::after {
+  content: '▾';
+  float: right;
+}
+
+.stats-breakdown__toggle[aria-expanded='true']::after {
+  content: '▴';
+}
+
+.stats-breakdown__toggle:hover {
+  color: var(--text);
+}
+
+.stats-breakdown__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.9rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.stats-breakdown__list li {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.stats-breakdown__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-breakdown__bar-wrap {
+  height: 8px;
+  background: var(--bg-elevated-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stats-breakdown__bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.stats-breakdown__count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-breakdown__empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 /* Misc states */

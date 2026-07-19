@@ -154,7 +154,7 @@ function Home() {
       <h2>Recommandation</h2>
 
       <div className="base-picker">
-        <SearchBar onSelect={addBaseAnime} />
+        <SearchBar onSelect={addBaseAnime} onQuickAddSeen={handleAddSeen} />
 
         {baseAnimes.length > 0 && (
           <ul className="base-picker__selected">

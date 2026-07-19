@@ -4,7 +4,9 @@ import {
   searchAnime,
   getAnimeDetails,
   getAnimeRecommendations,
+  getAnimeRelations,
   browseCatalogue,
+  getGenreCollection,
   clearQueryCache,
 } from './queries.js';
 
@@ -20,7 +22,15 @@ const sampleMedia = {
   averageScore: 88,
   seasonYear: 1999,
   format: 'TV',
+  status: 'RELEASING',
   studios: { nodes: [{ name: 'Toei Animation' }] },
+};
+
+const unreleasedMedia = {
+  ...sampleMedia,
+  id: 22,
+  title: { romaji: 'Unreleased Anime', english: null },
+  status: 'NOT_YET_RELEASED',
 };
 
 beforeEach(() => {
@@ -44,6 +54,7 @@ describe('searchAnime', () => {
         averageScore: 88,
         seasonYear: 1999,
         format: 'TV',
+        status: 'RELEASING',
         studios: ['Toei Animation'],
       },
     ]);
@@ -76,6 +87,7 @@ describe('getAnimeDetails', () => {
     expect(result.description).toBe('A pirate adventure.');
     expect(result.tags).toEqual(['Pirates']);
     expect(result.episodes).toBe(1000);
+    expect(result.status).toBe('RELEASING');
     expect(result.staff).toEqual([{ role: 'Director', name: 'Eiichiro Oda' }]);
   });
 
@@ -108,6 +120,41 @@ describe('getAnimeRecommendations', () => {
     });
 
     const result = await getAnimeRecommendations(21);
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('getAnimeRelations', () => {
+  it('keeps only franchise-relevant relation types', async () => {
+    anilistQuery.mockResolvedValue({
+      Media: {
+        relations: {
+          edges: [
+            { relationType: 'PREQUEL', node: { ...sampleMedia, id: 30, type: 'ANIME' } },
+            { relationType: 'SEQUEL', node: { ...sampleMedia, id: 31, type: 'ANIME' } },
+            { relationType: 'ADAPTATION', node: { ...sampleMedia, id: 32, type: 'MANGA' } },
+            { relationType: 'CHARACTER', node: { ...sampleMedia, id: 33, type: 'ANIME' } },
+          ],
+        },
+      },
+    });
+
+    const result = await getAnimeRelations(21);
+
+    expect(result.map((media) => media.id)).toEqual([30, 31]);
+  });
+
+  it('excludes non-anime relation nodes (e.g. the source manga)', async () => {
+    anilistQuery.mockResolvedValue({
+      Media: {
+        relations: {
+          edges: [{ relationType: 'SEQUEL', node: { ...sampleMedia, id: 30, type: 'MANGA' } }],
+        },
+      },
+    });
+
+    const result = await getAnimeRelations(21);
 
     expect(result).toEqual([]);
   });
@@ -160,5 +207,44 @@ describe('browseCatalogue', () => {
     const result = await browseCatalogue({ studio: 'Madhouse' });
 
     expect(result.media).toEqual([]);
+  });
+
+  it('requests status_not NOT_YET_RELEASED and also filters unreleased anime client-side', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia, unreleasedMedia] },
+    });
+
+    const result = await browseCatalogue();
+
+    expect(anilistQuery).toHaveBeenCalledWith(expect.stringContaining('status_not: NOT_YET_RELEASED'), expect.any(Object));
+    expect(result.media.map((item) => item.id)).toEqual([21]);
+  });
+});
+
+describe('getGenreCollection', () => {
+  it('returns the AniList genre list with Hentai excluded', async () => {
+    anilistQuery.mockResolvedValue({ GenreCollection: ['Action', 'Hentai', 'Comedy'] });
+
+    const genres = await getGenreCollection();
+
+    expect(genres).toEqual(['Action', 'Comedy']);
+  });
+
+  it('caches the result across calls', async () => {
+    anilistQuery.mockResolvedValue({ GenreCollection: ['Action'] });
+
+    await getGenreCollection();
+    await getGenreCollection();
+
+    expect(anilistQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to a static list when the request fails', async () => {
+    anilistQuery.mockRejectedValue(new Error('network'));
+
+    const genres = await getGenreCollection();
+
+    expect(genres.length).toBeGreaterThan(0);
+    expect(genres).not.toContain('Hentai');
   });
 });

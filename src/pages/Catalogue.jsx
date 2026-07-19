@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard.jsx';
-import { browseCatalogue } from '../api/queries.js';
+import { browseCatalogue, getGenreCollection } from '../api/queries.js';
 import { getList } from '../storage/listStorage.js';
 
 const SORT_OPTIONS = [
@@ -11,29 +11,9 @@ const SORT_OPTIONS = [
   { value: 'TITLE_ROMAJI', label: 'Titre' },
 ];
 
-const GENRES = [
-  'Action',
-  'Adventure',
-  'Comedy',
-  'Drama',
-  'Ecchi',
-  'Fantasy',
-  'Horror',
-  'Mahou Shoujo',
-  'Mecha',
-  'Music',
-  'Mystery',
-  'Psychological',
-  'Romance',
-  'Sci-Fi',
-  'Slice of Life',
-  'Sports',
-  'Supernatural',
-  'Thriller',
-];
-
 function Catalogue() {
   const navigate = useNavigate();
+  const [availableGenres, setAvailableGenres] = useState([]);
   const [genres, setGenres] = useState([]);
   const [year, setYear] = useState('');
   const [sort, setSort] = useState('POPULARITY_DESC');
@@ -64,6 +44,10 @@ function Catalogue() {
   }
 
   useEffect(() => {
+    getGenreCollection().then(setAvailableGenres);
+  }, []);
+
+  useEffect(() => {
     setPage(1);
     loadPage(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,7 +76,7 @@ function Catalogue() {
         <fieldset className="genre-filter">
           <legend>Genres</legend>
           <div className="genre-filter__options">
-            {GENRES.map((genre) => (
+            {availableGenres.map((genre) => (
               <label key={genre} className="genre-chip">
                 <input
                   type="checkbox"

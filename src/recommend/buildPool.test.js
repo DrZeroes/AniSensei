@@ -45,6 +45,19 @@ describe('buildCandidatePool', () => {
     expect(pool[0].score).toBeCloseTo(10); // genre(2)+studio(3) + rating(50)*0.1
   });
 
+  it('excludes candidates that have not aired yet', () => {
+    const unreleased = { id: 5, genres: ['Action'], studios: ['Ufotable'], status: 'NOT_YET_RELEASED' };
+    const pool = buildCandidatePool({
+      baseList: [base],
+      recommendationNodes: [
+        { rating: 10, media: candidateA },
+        { rating: 10, media: unreleased },
+      ],
+    });
+
+    expect(pool.map((entry) => entry.media.id)).toEqual([2]);
+  });
+
   it('caps the pool at 20 entries', () => {
     const nodes = Array.from({ length: 30 }, (_, i) => ({
       rating: i,

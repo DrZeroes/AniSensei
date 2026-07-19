@@ -1,4 +1,4 @@
-import { getAnimeDetails, getAnimeRecommendations, browseCatalogue } from '../api/queries.js';
+import { getAnimeDetails, getAnimeRecommendations, getAnimeRelations, browseCatalogue } from '../api/queries.js';
 import { buildCandidatePool } from './buildPool.js';
 import { fetchDiscoveryPick, pickDominantGenre } from './discovery.js';
 import { getList } from '../storage/listStorage.js';
@@ -6,6 +6,10 @@ import { getList } from '../storage/listStorage.js';
 const MAX_FAVORITES_FOR_SCORING = 10;
 const MIN_POOL_SIZE = 10;
 const SUPPLEMENT_PER_PAGE = 30;
+// Franchise entries (prequels/sequels/side stories) aren't in AniList's community
+// "recommendations" — they come from a separate relations query — so they need a
+// strong rating boost to reliably outrank generic cross-title recommendations.
+const RELATION_RATING_BOOST = 100;
 
 export async function fetchRecommendationData(baseAnimeIds) {
   if (!baseAnimeIds || baseAnimeIds.length === 0) {
@@ -16,7 +20,9 @@ export async function fetchRecommendationData(baseAnimeIds) {
   const recommendationLists = await Promise.all(
     baseAnimeIds.map((id) => getAnimeRecommendations(id))
   );
-  const recommendationNodes = recommendationLists.flat();
+  const relationLists = await Promise.all(baseAnimeIds.map((id) => getAnimeRelations(id)));
+  const relationNodes = relationLists.flat().map((media) => ({ rating: RELATION_RATING_BOOST, media }));
+  const recommendationNodes = [...recommendationLists.flat(), ...relationNodes];
 
   const localList = getList();
   const excludeIds = localList

@@ -50,6 +50,33 @@ describe('SearchBar', () => {
     expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
   });
 
+  it('does not show a quick-add button when onQuickAddSeen is not provided', async () => {
+    searchAnime.mockResolvedValue([{ id: 1, title: 'One Piece' }]);
+    const user = userEvent.setup();
+
+    render(<SearchBar onSelect={() => {}} />);
+    await user.type(screen.getByLabelText('Rechercher un anime'), 'One Piece');
+    await waitFor(() => screen.getByText('One Piece'));
+
+    expect(screen.queryByRole('button', { name: /Marquer/ })).not.toBeInTheDocument();
+  });
+
+  it('calls onQuickAddSeen (and clears the search) without calling onSelect', async () => {
+    searchAnime.mockResolvedValue([{ id: 1, title: 'One Piece' }]);
+    const onSelect = vi.fn();
+    const onQuickAddSeen = vi.fn();
+    const user = userEvent.setup();
+
+    render(<SearchBar onSelect={onSelect} onQuickAddSeen={onQuickAddSeen} />);
+    await user.type(screen.getByLabelText('Rechercher un anime'), 'One Piece');
+    await waitFor(() => screen.getByText('One Piece'));
+    await user.click(screen.getByRole('button', { name: 'Marquer One Piece comme vu' }));
+
+    expect(onQuickAddSeen).toHaveBeenCalledWith({ id: 1, title: 'One Piece' });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Rechercher un anime')).toHaveValue('');
+  });
+
   it('shows an error message when the search fails', async () => {
     searchAnime.mockRejectedValue(new Error('network'));
     const user = userEvent.setup();

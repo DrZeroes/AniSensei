@@ -20,9 +20,10 @@ function About() {
       <ul>
         <li>+2 points par genre partagé avec un anime de base (et par anime de base concerné)</li>
         <li>+3 points par studio d'animation partagé avec un anime de base</li>
+        <li>+0,5 point par tag AniList partagé (thèmes, ambiance, tropes...) avec un anime de base</li>
         <li>
-          un bonus plus faible (+1 par genre, +1,5 par studio) si ça correspond aussi à tes
-          coups de cœur existants
+          un bonus plus faible (+1 par genre, +1,5 par studio, +0,25 par tag) si ça correspond aussi
+          à tes coups de cœur existants
         </li>
         <li>+ un petit bonus lié à la popularité de la suggestion parmi la communauté AniList</li>
       </ul>

@@ -81,6 +81,24 @@ describe('SearchBar', () => {
     expect(onSelect).toHaveBeenCalledWith({ id: 1, title: 'One Piece' });
   });
 
+  it('marks the row as seen (colored, disabled quick-add) after clicking "+ Vu"', async () => {
+    searchAnime.mockResolvedValue([{ id: 1, title: 'One Piece' }]);
+    const user = userEvent.setup();
+
+    render(<SearchBar onSelect={() => {}} onQuickAddSeen={() => {}} />);
+    await user.type(screen.getByLabelText('Rechercher un anime'), 'One Piece');
+    await waitFor(() => screen.getByText('One Piece'));
+
+    const quickAddButton = screen.getByRole('button', { name: 'Marquer One Piece comme vu' });
+    expect(quickAddButton.closest('li')).not.toHaveClass('search-bar__item--seen');
+
+    await user.click(quickAddButton);
+
+    expect(quickAddButton).toBeDisabled();
+    expect(quickAddButton).toHaveTextContent('Vu ✓');
+    expect(quickAddButton.closest('li')).toHaveClass('search-bar__item--seen');
+  });
+
   it('shows an error message when the search fails', async () => {
     searchAnime.mockRejectedValue(new Error('network'));
     const user = userEvent.setup();

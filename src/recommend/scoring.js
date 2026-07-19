@@ -1,8 +1,10 @@
 export const WEIGHTS = {
   genre: 2,
   studio: 3,
+  tag: 0.5,
   favoriteGenre: 1,
   favoriteStudio: 1.5,
+  favoriteTag: 0.25,
 };
 
 // Gacha-style rarity frame, purely cosmetic — a rough read of how strongly a
@@ -37,11 +39,13 @@ export function scoreCandidate(candidate, baseList = [], favoritesList = []) {
   for (const base of baseList) {
     score += countOverlap(candidate.genres, base.genres) * WEIGHTS.genre;
     score += countOverlap(candidate.studios, base.studios) * WEIGHTS.studio;
+    score += countOverlap(candidate.tags, base.tags) * WEIGHTS.tag;
   }
 
   for (const favorite of favoritesList) {
     score += countOverlap(candidate.genres, favorite.genres) * WEIGHTS.favoriteGenre;
     score += countOverlap(candidate.studios, favorite.studios) * WEIGHTS.favoriteStudio;
+    score += countOverlap(candidate.tags, favorite.tags) * WEIGHTS.favoriteTag;
   }
 
   return score;

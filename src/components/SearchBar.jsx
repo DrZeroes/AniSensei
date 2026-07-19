@@ -7,6 +7,7 @@ function SearchBar({ onSelect, onQuickAddSeen }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle'); // idle | loading | error
+  const [markedSeenIds, setMarkedSeenIds] = useState(new Set());
 
   useEffect(() => {
     if (term.trim().length === 0) {
@@ -42,6 +43,7 @@ function SearchBar({ onSelect, onQuickAddSeen }) {
 
   function handleQuickAddSeen(anime) {
     onQuickAddSeen(anime);
+    setMarkedSeenIds((prev) => new Set(prev).add(anime.id));
   }
 
   return (
@@ -59,24 +61,28 @@ function SearchBar({ onSelect, onQuickAddSeen }) {
       )}
       {results.length > 0 && (
         <ul>
-          {results.map((anime) => (
-            <li key={anime.id}>
-              <button type="button" className="search-bar__title" onClick={() => handleSelect(anime)}>
-                {anime.title}
-              </button>
-              {onQuickAddSeen && (
-                <button
-                  type="button"
-                  className="search-bar__quick-add"
-                  onClick={() => handleQuickAddSeen(anime)}
-                  aria-label={`Marquer ${anime.title} comme vu`}
-                  title="Ajouter directement à mes animes vus"
-                >
-                  + Vu
+          {results.map((anime) => {
+            const isMarkedSeen = markedSeenIds.has(anime.id);
+            return (
+              <li key={anime.id} className={isMarkedSeen ? 'search-bar__item search-bar__item--seen' : 'search-bar__item'}>
+                <button type="button" className="search-bar__title" onClick={() => handleSelect(anime)}>
+                  {anime.title}
                 </button>
-              )}
-            </li>
-          ))}
+                {onQuickAddSeen && (
+                  <button
+                    type="button"
+                    className="search-bar__quick-add"
+                    onClick={() => handleQuickAddSeen(anime)}
+                    aria-label={`Marquer ${anime.title} comme vu`}
+                    title="Ajouter directement à mes animes vus"
+                    disabled={isMarkedSeen}
+                  >
+                    {isMarkedSeen ? 'Vu ✓' : '+ Vu'}
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

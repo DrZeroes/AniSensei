@@ -20,8 +20,10 @@ function writeSettings(settings) {
   }
 }
 
+// Defaults to on when the user has never touched the setting; an explicit
+// `false` (they turned it off) is preserved via nullish coalescing.
 export function getGachaMode() {
-  return Boolean(readSettings().gachaMode);
+  return readSettings().gachaMode ?? true;
 }
 
 export function setGachaMode(enabled) {

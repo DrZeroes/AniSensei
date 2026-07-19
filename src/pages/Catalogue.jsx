@@ -11,10 +11,6 @@ const SORT_OPTIONS = [
   { value: 'TITLE_ROMAJI', label: 'Titre' },
 ];
 
-// AniList has 400+ tags — rendering them all as checkboxes would swamp the page,
-// so matches are only shown once the user types, and capped to a manageable list.
-const MAX_TAG_MATCHES = 20;
-
 function Catalogue() {
   const navigate = useNavigate();
   const [availableGenres, setAvailableGenres] = useState([]);
@@ -76,12 +72,15 @@ function Catalogue() {
     setTags((prev) => prev.filter((t) => t !== tag));
   }
 
-  const tagMatches =
-    tagQuery.trim().length === 0
-      ? []
-      : availableTags
-          .filter((tag) => !tags.includes(tag) && tag.toLowerCase().includes(tagQuery.trim().toLowerCase()))
-          .slice(0, MAX_TAG_MATCHES);
+  // Combobox: the datalist below handles suggesting/autocompleting as the user
+  // types (native browser behaviour) — committing a tag just needs an exact
+  // match, whether typed by hand or filled in by picking a suggestion.
+  function handleTagInputKeyDown(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const match = availableTags.find((tag) => tag.toLowerCase() === tagQuery.trim().toLowerCase());
+    if (match) addTag(match);
+  }
 
   function handleLoadMore() {
     if (status === 'loading') return;
@@ -162,21 +161,20 @@ function Catalogue() {
           )}
           <input
             type="text"
+            list="tag-options"
             value={tagQuery}
             onChange={(event) => setTagQuery(event.target.value)}
-            placeholder="Rechercher un tag..."
-            aria-label="Rechercher un tag"
+            onKeyDown={handleTagInputKeyDown}
+            placeholder="Ajouter un tag..."
+            aria-label="Ajouter un tag"
           />
-          {tagQuery.trim().length > 0 && (
-            <div className="tag-filter__options">
-              {tagMatches.length === 0 && <p className="tag-filter__empty">Aucun tag trouvé.</p>}
-              {tagMatches.map((tag) => (
-                <button key={tag} type="button" className="tag-chip" onClick={() => addTag(tag)}>
-                  {tag}
-                </button>
+          <datalist id="tag-options">
+            {availableTags
+              .filter((tag) => !tags.includes(tag))
+              .map((tag) => (
+                <option key={tag} value={tag} />
               ))}
-            </div>
-          )}
+          </datalist>
         </fieldset>
         <input
           type="number"

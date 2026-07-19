@@ -122,35 +122,35 @@ describe('AnimeCard', () => {
     expect(container.querySelector('.anime-card--bonus-reveal')).not.toBeNull();
   });
 
-  it('shows a rarity tag and frame for a strong match', () => {
+  it('shows only a colored frame (no text label) for a strong match', () => {
     const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
     const { container } = render(<AnimeCard anime={anime} score={30} rarity={rarity} />);
 
-    expect(screen.getByText('Légendaire')).toBeInTheDocument();
     expect(container.querySelector('.anime-card--rarity-legendary')).not.toBeNull();
+    expect(screen.queryByText('Légendaire')).not.toBeInTheDocument();
   });
 
-  it('shows no rarity tag or frame for a common-tier match', () => {
+  it('shows no rarity frame for a common-tier match', () => {
     const rarity = rarityFor(2, [30, 20, 10, 2]); // common
     const { container } = render(<AnimeCard anime={anime} score={2} rarity={rarity} />);
 
-    expect(screen.queryByText('Commun')).not.toBeInTheDocument();
     expect(container.querySelector('[class*="anime-card--rarity-"]')).toBeNull();
   });
 
-  it('never shows the bonus and rarity tags together', () => {
+  it('never shows the bonus tag and a rarity frame together', () => {
     const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
-    render(<AnimeCard anime={anime} score={30} bonus bonusReason="Pépite." rarity={rarity} />);
+    const { container } = render(
+      <AnimeCard anime={anime} score={30} bonus bonusReason="Pépite." rarity={rarity} />
+    );
 
     expect(screen.getByRole('button', { name: 'Bonus' })).toBeInTheDocument();
-    expect(screen.queryByText('Légendaire')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="anime-card--rarity-"]')).toBeNull();
   });
 
   it('does not leak the rarity of a face-down card in gacha mode', () => {
     const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
     const { container } = render(<AnimeCard anime={anime} score={30} rarity={rarity} gacha />);
 
-    expect(screen.queryByText('Légendaire')).not.toBeInTheDocument();
     expect(container.querySelector('[class*="anime-card--rarity-"]')).toBeNull();
   });
 });

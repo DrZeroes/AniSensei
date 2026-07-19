@@ -7,6 +7,7 @@ import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '..
 import { fetchDiscoveryPick, pickDominantGenre } from '../recommend/discovery.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 import { searchAnime } from '../api/queries.js';
+import { setGachaMode } from '../storage/settings.js';
 
 vi.mock('../recommend/fetchRecommendationData.js', () => ({
   fetchRecommendationData: vi.fn(),
@@ -51,6 +52,7 @@ describe('Home', () => {
     upsertAnime.mockReset();
     searchAnime.mockReset();
     localStorage.clear(); // gacha mode preference is real localStorage, unlike the mocked stores above
+    setGachaMode(false); // gacha mode now defaults to on; most tests here don't exercise it
   });
 
   it('disables "Me conseiller un anime" until an anime is selected', async () => {

@@ -19,6 +19,18 @@ describe('scoreCandidate', () => {
     const candidate = { id: 3, genres: ['Fantasy'], studios: [] };
     expect(scoreCandidate(candidate, [base], [favorite])).toBe(3); // base: 1*2, favorite: 1*1
   });
+
+  it('adds a smaller weighted bonus for tag overlap with the base list', () => {
+    const withTags = { ...base, tags: ['Time Skip', 'Tsundere'] };
+    const candidate = { id: 3, genres: [], studios: [], tags: ['Time Skip'] };
+    expect(scoreCandidate(candidate, [withTags])).toBe(0.5); // 1*0.5
+  });
+
+  it('adds an even smaller bonus for tag overlap with the favorites list', () => {
+    const favoriteWithTags = { ...favorite, tags: ['Time Skip'] };
+    const candidate = { id: 3, genres: [], studios: [], tags: ['Time Skip'] };
+    expect(scoreCandidate(candidate, [], [favoriteWithTags])).toBe(0.25); // 1*0.25
+  });
 });
 
 describe('rarityFor', () => {

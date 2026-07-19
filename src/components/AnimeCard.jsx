@@ -95,9 +95,6 @@ function AnimeCard({
               </span>
             </span>
           )}
-          {showRarity && (
-            <span className={`anime-card__rarity-tag anime-card__rarity-tag--${rarity.id}`}>{rarity.label}</span>
-          )}
         </div>
       )}
       <p>{metaLine(anime)}</p>

@@ -6,20 +6,20 @@ describe('settings', () => {
     localStorage.clear();
   });
 
-  it('defaults gacha mode to false when nothing is stored', () => {
-    expect(getGachaMode()).toBe(false);
+  it('defaults gacha mode to true when nothing is stored', () => {
+    expect(getGachaMode()).toBe(true);
   });
 
-  it('persists gacha mode across calls', () => {
-    setGachaMode(true);
-    expect(getGachaMode()).toBe(true);
-
+  it('persists an explicit false (turning it off) across calls', () => {
     setGachaMode(false);
     expect(getGachaMode()).toBe(false);
+
+    setGachaMode(true);
+    expect(getGachaMode()).toBe(true);
   });
 
-  it('falls back to defaults when stored data is corrupted', () => {
+  it('falls back to the default (true) when stored data is corrupted', () => {
     localStorage.setItem('aniSensei.settings', '{not valid json');
-    expect(getGachaMode()).toBe(false);
+    expect(getGachaMode()).toBe(true);
   });
 });

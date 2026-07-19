@@ -122,41 +122,57 @@ describe('Catalogue', () => {
     );
   });
 
-  it('shows matching tags only once the user starts typing, capped to a manageable list', async () => {
+  it('offers all available tags as combobox autocomplete suggestions, excluding already-selected ones', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
-    const user = userEvent.setup();
 
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
-    expect(screen.queryByRole('button', { name: 'Time Skip' })).not.toBeInTheDocument();
-
-    await user.type(screen.getByLabelText('Rechercher un tag'), 'time');
-
-    expect(screen.getByRole('button', { name: 'Time Skip' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Time Travel' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tsundere' })).not.toBeInTheDocument();
+    const datalist = document.getElementById('tag-options');
+    expect([...datalist.options].map((option) => option.value)).toEqual([
+      'Time Skip',
+      'Tsundere',
+      'Time Travel',
+    ]);
   });
 
-  it('adds a tag to the filter and clears the search, then lets it be removed', async () => {
+  it('adds a tag typed as an exact match on Enter, clears the input, and lets it be removed', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
 
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
-    await user.type(screen.getByLabelText('Rechercher un tag'), 'time skip');
-    await user.click(screen.getByRole('button', { name: 'Time Skip' }));
+    const tagInput = screen.getByLabelText('Ajouter un tag');
+    await user.type(tagInput, 'Time Skip{Enter}');
 
-    expect(screen.getByLabelText('Rechercher un tag')).toHaveValue('');
+    expect(tagInput).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Retirer le tag Time Skip' })).toBeInTheDocument();
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['Time Skip'] }))
     );
+
+    // The datalist no longer offers an already-selected tag.
+    const datalist = document.getElementById('tag-options');
+    expect([...datalist.options].map((option) => option.value)).not.toContain('Time Skip');
 
     await user.click(screen.getByRole('button', { name: 'Retirer le tag Time Skip' }));
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }))
     );
+  });
+
+  it('does not add anything when Enter is pressed without an exact tag match', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText('Ajouter un tag'), 'not a real tag{Enter}');
+
+    expect(screen.queryByRole('button', { name: /Retirer le tag/ })).not.toBeInTheDocument();
+    expect(browseCatalogue).toHaveBeenCalledTimes(1); // no re-fetch triggered
   });
 
   it('shows the list badge for anime already present in the local list', async () => {

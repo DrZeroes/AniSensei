@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-function ChecklistSection({ title, entries, selectedIds, onToggle }) {
-  const [expanded, setExpanded] = useState(false);
+function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onToggleExpanded }) {
   const [search, setSearch] = useState('');
 
   const filtered = entries.filter((entry) => entry.title.toLowerCase().includes(search.toLowerCase()));
@@ -12,7 +11,7 @@ function ChecklistSection({ title, entries, selectedIds, onToggle }) {
         type="button"
         className="checklist__toggle"
         aria-expanded={expanded}
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={onToggleExpanded}
       >
         {title}
       </button>

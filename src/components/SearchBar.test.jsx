@@ -60,6 +60,22 @@ describe('SearchBar', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
 
+  it('renders no results list when the field is empty', () => {
+    render(<SearchBar onSelect={() => {}} />);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('does not render an empty results list when nothing matches', async () => {
+    searchAnime.mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    render(<SearchBar onSelect={() => {}} />);
+    await user.type(screen.getByLabelText('Rechercher un anime'), 'Zzz');
+
+    await waitFor(() => expect(screen.getByText('Aucun anime trouvé.')).toBeInTheDocument());
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
   it('shows a no-results message when nothing matches', async () => {
     searchAnime.mockResolvedValue([]);
     const user = userEvent.setup();

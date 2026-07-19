@@ -31,6 +31,8 @@ function Home() {
   const [status, setStatus] = useState('idle');
   const [lastBaseIds, setLastBaseIds] = useState([]);
   const [markedEntries, setMarkedEntries] = useState({});
+  const [favoritesExpanded, setFavoritesExpanded] = useState(false);
+  const [seenExpanded, setSeenExpanded] = useState(false);
 
   const localList = getList();
   const favoriteEntries = localList.filter((entry) => entry.note === 'coup_de_coeur');
@@ -78,6 +80,8 @@ function Home() {
   }
 
   function handleRecommend() {
+    setFavoritesExpanded(false);
+    setSeenExpanded(false);
     runRecommendation(baseAnimes.map((anime) => anime.id));
   }
 
@@ -175,12 +179,16 @@ function Home() {
             entries={favoriteEntries}
             selectedIds={selectedIds}
             onToggle={toggleChecklistAnime}
+            expanded={favoritesExpanded}
+            onToggleExpanded={() => setFavoritesExpanded((prev) => !prev)}
           />
           <ChecklistSection
             title="Mes animes vus"
             entries={seenEntries}
             selectedIds={selectedIds}
             onToggle={toggleChecklistAnime}
+            expanded={seenExpanded}
+            onToggleExpanded={() => setSeenExpanded((prev) => !prev)}
           />
         </div>
 

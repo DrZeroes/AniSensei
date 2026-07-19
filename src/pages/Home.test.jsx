@@ -270,6 +270,26 @@ describe('Home', () => {
     expect(screen.getByText('Plus de suggestions dans ce lot, relance une recherche.')).toBeInTheDocument();
   });
 
+  it('collapses the expanded checklist when a recommendation is launched', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: null,
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+    expect(screen.getByLabelText('Base Anime')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+
+    await waitFor(() => expect(screen.getByText('Tsukihime')).toBeInTheDocument());
+    expect(screen.queryByLabelText('Base Anime')).not.toBeInTheDocument();
+  });
+
   it('resets the recommendation results when "Réinitialiser" is clicked', async () => {
     fetchRecommendationData.mockResolvedValue({
       pool: [{ media: candidate, score: 10 }],

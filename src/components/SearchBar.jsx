@@ -53,15 +53,17 @@ function SearchBar({ onSelect }) {
       {status === 'idle' && term.trim().length > 0 && results.length === 0 && (
         <p>Aucun anime trouvé.</p>
       )}
-      <ul>
-        {results.map((anime) => (
-          <li key={anime.id}>
-            <button type="button" onClick={() => handleSelect(anime)}>
-              {anime.title}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {results.length > 0 && (
+        <ul>
+          {results.map((anime) => (
+            <li key={anime.id}>
+              <button type="button" onClick={() => handleSelect(anime)}>
+                {anime.title}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ function AnimeCard({
   scoreDetail = null,
   bonus = false,
   bonusReason = null,
+  rarity = null,
   gacha = false,
   onAddSeen,
   onExclude,
@@ -28,13 +29,15 @@ function AnimeCard({
 }) {
   const [revealed, setRevealed] = useState(!gacha);
   const badge = badgeLabel(listEntry);
-  // While face-down in gacha mode, the bonus card must look identical to the
-  // rest — no gold border giving away which one it is — so the shiny "bonus"
-  // treatment only kicks in once actually revealed.
-  const showBonusStyling = bonus && !(gacha && !revealed);
+  // While face-down in gacha mode, nothing about the card's eventual rarity or
+  // bonus status should be visible — same reasoning for both: no early hints.
+  const isHiddenFace = gacha && !revealed;
+  const showBonusStyling = bonus && !isHiddenFace;
+  const showRarity = rarity && rarity.id !== 'common' && !bonus && !isHiddenFace;
   const cardClassName = [
     'anime-card',
     showBonusStyling && 'anime-card--bonus',
+    showRarity && `anime-card--rarity-${rarity.id}`,
     gacha && revealed && (bonus ? 'anime-card--bonus-reveal' : 'anime-card--revealed'),
   ]
     .filter(Boolean)
@@ -91,6 +94,9 @@ function AnimeCard({
                 </p>
               </span>
             </span>
+          )}
+          {showRarity && (
+            <span className={`anime-card__rarity-tag anime-card__rarity-tag--${rarity.id}`}>{rarity.label}</span>
           )}
         </div>
       )}

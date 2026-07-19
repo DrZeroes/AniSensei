@@ -790,6 +790,58 @@ button:focus-visible {
   color: #2a1a00;
 }
 
+/* Gacha-style rarity frames — a rough, purely cosmetic read of match strength.
+   "Commun" (the baseline) gets no special treatment; hidden from gacha mode's
+   face-down cards so revealing one is still a surprise. */
+.anime-card--rarity-rare {
+  border-color: #4fa3ff;
+  box-shadow: 0 0 10px 1px rgba(79, 163, 255, 0.35);
+}
+
+.anime-card--rarity-epic {
+  border-color: #b06bff;
+  box-shadow: 0 0 12px 2px rgba(176, 107, 255, 0.4);
+}
+
+.anime-card--rarity-legendary {
+  border-color: #ffb347;
+  animation: legendary-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes legendary-glow {
+  0%, 100% { box-shadow: 0 0 14px 2px rgba(255, 179, 71, 0.5); }
+  50% { box-shadow: 0 0 22px 5px rgba(255, 179, 71, 0.85); }
+}
+
+.anime-card__rarity-tag {
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.anime-card__rarity-tag--rare {
+  background: rgba(79, 163, 255, 0.18);
+  color: #4fa3ff;
+}
+
+.anime-card__rarity-tag--epic {
+  background: rgba(176, 107, 255, 0.18);
+  color: #b06bff;
+}
+
+.anime-card__rarity-tag--legendary {
+  background: rgba(255, 179, 71, 0.22);
+  color: #ffb347;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anime-card--rarity-legendary {
+    animation: none !important;
+    box-shadow: 0 0 14px 2px rgba(255, 179, 71, 0.5);
+  }
+}
+
 /* Gacha reveal of the bonus card: same flourish as .anime-card--bonus-reveal
    below, but settling into the looping gold shimmer instead of stopping —
    placed after .results-grid .anime-card--bonus so it wins the animation

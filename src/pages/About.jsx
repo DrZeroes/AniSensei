@@ -34,6 +34,12 @@ function About() {
         détail du calcul.
       </p>
       <p>
+        Chaque carte a aussi un <strong>cadre de rareté</strong> reflétant la force du score : bleu
+        pour Rare, violet pour Épique, doré (avec un léger scintillement) pour Légendaire. Une carte
+        sans cadre spécial est simplement "Commune". La carte Bonus n'a pas de rareté — elle garde
+        son propre style doré.
+      </p>
+      <p>
         En plus de ces 5 suggestions, une <strong>6ᵉ carte "Découverte"</strong> apparaît toujours au
         milieu des autres, reconnaissable à son tag <strong>Bonus</strong> à côté du score (survole-le
         pour voir pourquoi elle a été choisie). Elle utilise le même calcul de score, mais pioche

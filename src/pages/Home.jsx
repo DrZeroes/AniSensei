@@ -7,6 +7,7 @@ import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '..
 import { fetchDiscoveryPick, pickDominantGenre } from '../recommend/discovery.js';
 import { pickWeighted } from '../recommend/pickResults.js';
 import { explainMatch, buildScoreTooltip } from '../recommend/explain.js';
+import { rarityFor } from '../recommend/scoring.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 import { getGachaMode, setGachaMode } from '../storage/settings.js';
 
@@ -229,6 +230,7 @@ function Home() {
         scoreDetail={buildScoreTooltip(entry.media, baseList, favoritesList)}
         bonus={bonus}
         bonusReason={bonus ? bonusReasonFor(baseList) : null}
+        rarity={rarityFor(entry.score)}
         gacha={gachaMode}
         onAddSeen={handleAddSeen}
         onExclude={handleExclude}

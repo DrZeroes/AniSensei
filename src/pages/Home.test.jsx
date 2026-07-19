@@ -408,4 +408,36 @@ describe('Home', () => {
 
     expect(localStorage.getItem('aniSensei.settings')).toContain('"gachaMode":true');
   });
+
+  it('shuffles the bonus card among the others in gacha mode instead of always showing it last', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: { media: { id: 50, title: 'Obscure Gem', genres: [], studios: [], coverImage: null }, score: 4 },
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+    // Forces the Fisher-Yates shuffle to swap the last two positions every time,
+    // so [regular, bonus] deterministically becomes [bonus, regular].
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    try {
+      renderHome();
+      await user.click(screen.getByRole('checkbox', { name: 'Mode gacha' }));
+      await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+      await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+
+      await waitFor(() =>
+        expect(screen.getAllByRole('button', { name: /Révéler/ })).toHaveLength(2)
+      );
+      const revealButtons = screen.getAllByRole('button', { name: /Révéler/ });
+      expect(revealButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+        'Révéler Obscure Gem',
+        'Révéler Tsukihime',
+      ]);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
 });

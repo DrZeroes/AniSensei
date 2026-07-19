@@ -28,7 +28,15 @@ function AnimeCard({
 }) {
   const [revealed, setRevealed] = useState(!gacha);
   const badge = badgeLabel(listEntry);
-  const cardClassName = ['anime-card', bonus && 'anime-card--bonus', gacha && revealed && 'anime-card--revealed']
+  // While face-down in gacha mode, the bonus card must look identical to the
+  // rest — no gold border giving away which one it is — so the shiny "bonus"
+  // treatment only kicks in once actually revealed.
+  const showBonusStyling = bonus && !(gacha && !revealed);
+  const cardClassName = [
+    'anime-card',
+    showBonusStyling && 'anime-card--bonus',
+    gacha && revealed && (bonus ? 'anime-card--bonus-reveal' : 'anime-card--revealed'),
+  ]
     .filter(Boolean)
     .join(' ');
 

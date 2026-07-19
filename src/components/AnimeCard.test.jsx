@@ -98,4 +98,26 @@ describe('AnimeCard', () => {
     expect(screen.getByText('One Piece')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Révéler/ })).not.toBeInTheDocument();
   });
+
+  it('does not leak which card is the bonus while it is face-down in gacha mode', () => {
+    const { container } = render(
+      <AnimeCard anime={anime} score={4} bonus bonusReason="Pépite peu connue." gacha />
+    );
+
+    expect(screen.queryByText('Bonus')).not.toBeInTheDocument();
+    expect(container.querySelector('.anime-card--bonus')).toBeNull();
+    expect(container.querySelector('.anime-card--hidden')).not.toBeNull();
+  });
+
+  it('reveals the bonus tag and its distinct styling only after the gacha reveal click', async () => {
+    const { container } = render(
+      <AnimeCard anime={anime} score={4} bonus bonusReason="Pépite peu connue." gacha />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Révéler/ }));
+
+    expect(screen.getByRole('button', { name: 'Bonus' })).toBeInTheDocument();
+    expect(container.querySelector('.anime-card--bonus')).not.toBeNull();
+    expect(container.querySelector('.anime-card--bonus-reveal')).not.toBeNull();
+  });
 });

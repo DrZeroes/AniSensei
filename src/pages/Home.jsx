@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
@@ -15,6 +15,15 @@ function bonusReasonFor(baseList) {
   return genre
     ? `Pépite peu connue du genre "${genre}", en dehors du top des plus populaires — pour sortir des sentiers battus.`
     : 'Pépite peu connue, en dehors du top des plus populaires — pour sortir des sentiers battus.';
+}
+
+function shuffled(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 // Safety net so a "Voir d'autres" click can't loop through an unbounded number
@@ -230,6 +239,18 @@ function Home() {
 
   const hasSomethingToReset = results.length > 0 || discoveryPick !== null || status !== 'idle';
 
+  // In gacha mode, the bonus card's position among the others is shuffled each
+  // time the batch changes, so revealing it face-down gives no hint of where
+  // it is. Outside gacha mode, order stays predictable (bonus card last).
+  const displayedCards = useMemo(() => {
+    const cards = [
+      ...results.map((entry) => ({ entry, bonus: false })),
+      ...(discoveryPick ? [{ entry: discoveryPick, bonus: true }] : []),
+    ];
+    return gachaMode ? shuffled(cards) : cards;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, discoveryPick, gachaMode]);
+
   return (
     <section>
       <h2>Recommandation</h2>
@@ -301,8 +322,7 @@ function Home() {
       )}
 
       <div className="results-grid">
-        {results.map((entry) => renderCard(entry))}
-        {discoveryPick && renderCard(discoveryPick, { bonus: true })}
+        {displayedCards.map(({ entry, bonus }) => renderCard(entry, { bonus }))}
       </div>
 
       {results.length > 0 && status !== 'exhausted' && (

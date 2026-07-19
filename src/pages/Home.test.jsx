@@ -3,12 +3,18 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Home from './Home.jsx';
-import { fetchRecommendationData } from '../recommend/fetchRecommendationData.js';
+import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '../recommend/fetchRecommendationData.js';
+import { fetchDiscoveryPick } from '../recommend/discovery.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 import { searchAnime } from '../api/queries.js';
 
 vi.mock('../recommend/fetchRecommendationData.js', () => ({
   fetchRecommendationData: vi.fn(),
+  fetchMoreCandidates: vi.fn(),
+  getExcludedIds: vi.fn(),
+}));
+vi.mock('../recommend/discovery.js', () => ({
+  fetchDiscoveryPick: vi.fn(),
 }));
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(() => []),
@@ -36,6 +42,9 @@ async function selectFromChecklist(user, sectionTitle, animeTitle) {
 describe('Home', () => {
   beforeEach(() => {
     fetchRecommendationData.mockReset();
+    fetchMoreCandidates.mockReset().mockResolvedValue({ candidates: [], genre: null });
+    getExcludedIds.mockReset().mockReturnValue([]);
+    fetchDiscoveryPick.mockReset().mockResolvedValue(null);
     getList.mockReset().mockReturnValue([]);
     upsertAnime.mockReset();
     searchAnime.mockReset();
@@ -249,13 +258,15 @@ describe('Home', () => {
     expect(screen.getByText('Obscure Gem')).toBeInTheDocument();
   });
 
-  it('keeps existing results visible when "Voir d\'autres" finds nothing new', async () => {
+  it('keeps existing results visible when "Voir d\'autres" finds nothing new anywhere', async () => {
     fetchRecommendationData.mockResolvedValue({
       pool: [{ media: candidate, score: 10 }],
       baseList: [],
       favoritesList: [],
       discoveryPick: null,
     });
+    // No dominant genre (empty baseList), so the pool top-up has nothing to fetch either.
+    fetchMoreCandidates.mockResolvedValue({ candidates: [], genre: null });
     getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
     const user = userEvent.setup();
 
@@ -266,8 +277,64 @@ describe('Home', () => {
 
     await user.click(screen.getByRole('button', { name: "Voir d'autres" }));
 
+    await waitFor(() =>
+      expect(screen.getByText('Plus de suggestions dans ce lot, relance une recherche.')).toBeInTheDocument()
+    );
     expect(screen.getByText('Tsukihime')).toBeInTheDocument();
-    expect(screen.getByText('Plus de suggestions dans ce lot, relance une recherche.')).toBeInTheDocument();
+  });
+
+  it('tops up the pool from the catalogue when "Voir d\'autres" runs out of recommendations', async () => {
+    const extra = { id: 99, title: 'Fresh Pick', genres: [], studios: [], coverImage: null };
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [{ id: 1, genres: ['Action'], studios: [] }],
+      favoritesList: [],
+      discoveryPick: null,
+    });
+    fetchMoreCandidates.mockResolvedValue({ candidates: [{ media: extra, score: 5 }], genre: 'Action' });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+    await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+    await waitFor(() => screen.getByText('Tsukihime'));
+
+    await user.click(screen.getByRole('button', { name: "Voir d'autres" }));
+
+    await waitFor(() => expect(screen.getByText('Fresh Pick')).toBeInTheDocument());
+    expect(fetchMoreCandidates).toHaveBeenCalledWith(
+      expect.objectContaining({ baseList: [{ id: 1, genres: ['Action'], studios: [] }], page: 1 })
+    );
+  });
+
+  it('rolls a fresh "Découverte" bonus pick every time "Voir d\'autres" is clicked', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: { media: { id: 50, title: 'Obscure Gem', genres: [], studios: [], coverImage: null }, score: 4 },
+    });
+    fetchDiscoveryPick.mockResolvedValueOnce({
+      media: { id: 51, title: 'Second Gem', genres: [], studios: [], coverImage: null },
+      score: 3,
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+    await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+    await waitFor(() => expect(screen.getByText('Obscure Gem')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: "Voir d'autres" }));
+
+    await waitFor(() => expect(screen.getByText('Second Gem')).toBeInTheDocument());
+    expect(fetchDiscoveryPick).toHaveBeenLastCalledWith(
+      [],
+      [],
+      expect.arrayContaining([2, 50])
+    );
   });
 
   it('collapses the expanded checklist when a recommendation is launched', async () => {

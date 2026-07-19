@@ -30,10 +30,15 @@ function About() {
         Le score ne détermine pas directement "le top 5" : parmi le pool de candidats
         pertinents, 5 sont tirés au hasard mais <strong>pondérés</strong> par leur score — plus il
         est élevé, plus la suggestion a de chances d'apparaître, mais ça garde de la variété d'une
-        fois à l'autre. La carte "Découverte" utilise le même calcul, mais pioche uniquement parmi
-        des animes peu populaires (en dehors du top ~500) du genre dominant de ta sélection, pour
-        toujours proposer une pépite plutôt qu'un classique déjà connu. Survole (ou touche sur
-        mobile) le score affiché sur une carte pour voir le détail du calcul.
+        fois à l'autre. Survole (ou touche sur mobile) le score affiché sur une carte pour voir le
+        détail du calcul.
+      </p>
+      <p>
+        En plus de ces 5 suggestions, une <strong>6ᵉ carte "Découverte"</strong> apparaît toujours à
+        part : elle utilise le même calcul de score, mais pioche uniquement parmi des animes peu
+        populaires (en dehors du top ~500) du genre dominant de ta sélection, pour toujours
+        proposer une pépite plutôt qu'un classique déjà connu. Chaque clic sur "Voir d'autres" tire
+        aussi une nouvelle carte "Découverte", en plus des 5 nouvelles suggestions.
       </p>
       <p>
         Code source sur{' '}
@@ -50,6 +55,9 @@ function About() {
         pour les informations sur les animes (synopsis, genres, images, recommandations). Ce
         projet est indépendant et n'est ni affilié ni approuvé par AniList.
       </div>
+      <p className="about-page__contact">
+        Contact : zeroes.time.prod@gmail.com
+      </p>
     </section>
   );
 }

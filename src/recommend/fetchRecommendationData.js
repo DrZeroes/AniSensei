@@ -11,6 +11,36 @@ const SUPPLEMENT_PER_PAGE = 30;
 // strong rating boost to reliably outrank generic cross-title recommendations.
 const RELATION_RATING_BOOST = 100;
 
+export function getExcludedIds() {
+  return getList()
+    .filter((entry) => entry.status === 'vu' || entry.excluded)
+    .map((entry) => entry.animeId);
+}
+
+// Fetches one more page of popular, genre-matched candidates so "Voir d'autres"
+// never truly runs dry after the initial pool of recommendations is exhausted.
+// Unlike the initial pool build, this isn't capped to POOL_SIZE — every match is
+// kept so it can be merged into the growing pool held in Home's state.
+export async function fetchMoreCandidates({ baseList, favoritesList, excludeIds, page }) {
+  const genre = pickDominantGenre(baseList);
+  if (!genre) return { candidates: [], genre: null };
+
+  const { media: extraMedia } = await browseCatalogue({
+    genres: [genre],
+    sort: ['POPULARITY_DESC'],
+    perPage: SUPPLEMENT_PER_PAGE,
+    page,
+  });
+  if (extraMedia.length === 0) return { candidates: [], genre };
+
+  const extraNodes = extraMedia.map((media) => ({ rating: 0, media }));
+  const candidates = buildCandidatePool(
+    { baseList, recommendationNodes: extraNodes, favoritesList, excludeIds },
+    Infinity
+  );
+  return { candidates, genre };
+}
+
 export async function fetchRecommendationData(baseAnimeIds) {
   if (!baseAnimeIds || baseAnimeIds.length === 0) {
     throw new Error('base_vide');
@@ -25,9 +55,7 @@ export async function fetchRecommendationData(baseAnimeIds) {
   const recommendationNodes = [...recommendationLists.flat(), ...relationNodes];
 
   const localList = getList();
-  const excludeIds = localList
-    .filter((entry) => entry.status === 'vu' || entry.excluded)
-    .map((entry) => entry.animeId);
+  const excludeIds = getExcludedIds();
 
   const favoriteIds = localList
     .filter((entry) => entry.note === 'coup_de_coeur' && !baseAnimeIds.includes(entry.animeId))

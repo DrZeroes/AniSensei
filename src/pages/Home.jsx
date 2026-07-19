@@ -3,10 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
 import ChecklistSection from '../components/ChecklistSection.jsx';
-import { fetchRecommendationData } from '../recommend/fetchRecommendationData.js';
+import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '../recommend/fetchRecommendationData.js';
+import { fetchDiscoveryPick } from '../recommend/discovery.js';
 import { pickWeighted } from '../recommend/pickResults.js';
 import { explainMatch, buildScoreTooltip } from '../recommend/explain.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
+
+// Safety net so a "Voir d'autres" click can't loop through an unbounded number
+// of AniList pages if the genre's catalogue is nearly exhausted of unseen anime.
+const MAX_SUPPLEMENT_PAGES_PER_CLICK = 5;
+
+function mergeCandidates(pool, extra) {
+  const byId = new Map(pool.map((entry) => [entry.media.id, entry]));
+  for (const entry of extra) {
+    const existing = byId.get(entry.media.id);
+    if (!existing || existing.score < entry.score) byId.set(entry.media.id, entry);
+  }
+  return Array.from(byId.values());
+}
 
 function entryToMediaSummary(entry) {
   return {
@@ -25,19 +39,25 @@ function Home() {
   const [baseList, setBaseList] = useState([]);
   const [favoritesList, setFavoritesList] = useState([]);
   const [pool, setPool] = useState([]);
+  const [poolPage, setPoolPage] = useState(1);
   const [shownIds, setShownIds] = useState([]);
   const [results, setResults] = useState([]);
   const [discoveryPick, setDiscoveryPick] = useState(null);
+  const [discoveryShownIds, setDiscoveryShownIds] = useState([]);
   const [status, setStatus] = useState('idle');
+  const [loadingMore, setLoadingMore] = useState(false);
   const [lastBaseIds, setLastBaseIds] = useState([]);
   const [markedEntries, setMarkedEntries] = useState({});
   const [favoritesExpanded, setFavoritesExpanded] = useState(false);
   const [seenExpanded, setSeenExpanded] = useState(false);
 
   const localList = getList();
-  const favoriteEntries = localList.filter((entry) => entry.note === 'coup_de_coeur');
+  const byTitle = (a, b) => a.title.localeCompare(b.title);
+  const favoriteEntries = localList.filter((entry) => entry.note === 'coup_de_coeur').sort(byTitle);
   // Anime already listed under "coups de cœur" aren't repeated here, even if also marked "vu".
-  const seenEntries = localList.filter((entry) => entry.status === 'vu' && entry.note !== 'coup_de_coeur');
+  const seenEntries = localList
+    .filter((entry) => entry.status === 'vu' && entry.note !== 'coup_de_coeur')
+    .sort(byTitle);
   const selectedIds = baseAnimes.map((anime) => anime.id);
 
   function addBaseAnime(anime) {
@@ -68,11 +88,13 @@ function Home() {
       } = await fetchRecommendationData(baseAnimeIds);
       const { picked } = pickWeighted(newPool, 5);
       setPool(newPool);
+      setPoolPage(1);
       setBaseList(newBaseList);
       setFavoritesList(newFavoritesList);
       setShownIds(picked.map((entry) => entry.media.id));
       setResults(picked);
       setDiscoveryPick(newDiscoveryPick);
+      setDiscoveryShownIds(newDiscoveryPick ? [newDiscoveryPick.media.id] : []);
       setStatus('idle');
     } catch (error) {
       setStatus(error.message === 'base_vide' ? 'empty_base' : 'error');
@@ -87,19 +109,58 @@ function Home() {
 
   function handleReset() {
     setPool([]);
+    setPoolPage(1);
     setShownIds([]);
     setResults([]);
     setDiscoveryPick(null);
+    setDiscoveryShownIds([]);
     setStatus('idle');
   }
 
-  function handleSeeMore() {
-    const { picked, exhausted } = pickWeighted(pool, 5, shownIds);
-    if (picked.length > 0) {
-      setShownIds((prev) => [...prev, ...picked.map((entry) => entry.media.id)]);
-      setResults(picked);
+  async function handleSeeMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const excludeIds = getExcludedIds();
+      let currentPool = pool;
+      let page = poolPage;
+      let { picked, exhausted } = pickWeighted(currentPool, 5, shownIds);
+
+      // The initial pool (from AniList's community recommendations) is finite —
+      // once it runs dry, keep pulling extra pages of popular genre-matched anime
+      // so there's always something left to show.
+      for (let attempt = 0; picked.length < 5 && exhausted && attempt < MAX_SUPPLEMENT_PAGES_PER_CLICK; attempt += 1) {
+        const { candidates, genre } = await fetchMoreCandidates({ baseList, favoritesList, excludeIds, page });
+        page += 1;
+        if (!genre || candidates.length === 0) break;
+        currentPool = mergeCandidates(currentPool, candidates);
+        ({ picked, exhausted } = pickWeighted(currentPool, 5, shownIds));
+      }
+
+      setPool(currentPool);
+      setPoolPage(page);
+
+      const newShownIds = picked.map((entry) => entry.media.id);
+      if (picked.length > 0) {
+        setShownIds((prev) => [...prev, ...newShownIds]);
+        setResults(picked);
+      }
+      setStatus(picked.length > 0 ? 'idle' : 'exhausted');
+
+      // Always try to surface a fresh "Découverte" bonus alongside the new batch.
+      const newDiscoveryPick = await fetchDiscoveryPick(baseList, favoritesList, [
+        ...excludeIds,
+        ...shownIds,
+        ...newShownIds,
+        ...discoveryShownIds,
+      ]);
+      if (newDiscoveryPick) {
+        setDiscoveryPick(newDiscoveryPick);
+        setDiscoveryShownIds((prev) => [...prev, newDiscoveryPick.media.id]);
+      }
+    } finally {
+      setLoadingMore(false);
     }
-    setStatus(exhausted ? 'exhausted' : 'idle');
   }
 
   function handleAddSeen(anime) {
@@ -225,8 +286,8 @@ function Home() {
       )}
 
       {results.length > 0 && status !== 'exhausted' && (
-        <button type="button" onClick={handleSeeMore}>
-          Voir d'autres
+        <button type="button" onClick={handleSeeMore} disabled={loadingMore}>
+          {loadingMore ? 'Recherche...' : "Voir d'autres"}
         </button>
       )}
       {status === 'exhausted' && <p>Plus de suggestions dans ce lot, relance une recherche.</p>}

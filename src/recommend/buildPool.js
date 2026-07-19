@@ -3,7 +3,10 @@ import { scoreCandidate } from './scoring.js';
 const POOL_SIZE = 20;
 const RATING_WEIGHT = 0.1;
 
-export function buildCandidatePool({ baseList, recommendationNodes, favoritesList = [], excludeIds = [] }) {
+export function buildCandidatePool(
+  { baseList, recommendationNodes, favoritesList = [], excludeIds = [] },
+  limit = POOL_SIZE
+) {
   const excluded = new Set([...excludeIds, ...baseList.map((media) => media.id)]);
   const byId = new Map();
 
@@ -21,5 +24,5 @@ export function buildCandidatePool({ baseList, recommendationNodes, favoritesLis
 
   return Array.from(byId.values())
     .sort((a, b) => b.score - a.score)
-    .slice(0, POOL_SIZE);
+    .slice(0, limit);
 }

@@ -147,10 +147,10 @@ function MyList() {
             </option>
           ))}
         </select>
-        <button type="button" onClick={handleExport}>
+        <button type="button" className="my-list-controls__action" onClick={handleExport}>
           Exporter
         </button>
-        <label>
+        <label className="my-list-controls__action my-list-controls__action--file">
           Importer
           <input type="file" accept="application/json" onChange={handleImportFile} aria-label="Importer un fichier" />
         </label>
@@ -160,53 +160,55 @@ function MyList() {
         {visibleList.map((entry) => (
           <li key={entry.animeId} className="my-list-item">
             {entry.coverImage && <img src={entry.coverImage} alt="" className="my-list-item__cover" />}
-            <button
-              type="button"
-              className="my-list-item__title"
-              onClick={() => navigate(`/anime/${entry.animeId}`)}
-            >
-              {entry.title}
-            </button>
-            <div className="my-list-item__fields">
-              <select
-                className={`status-select status-select--${entry.status}`}
-                value={entry.status}
-                aria-label={`Statut de ${entry.title}`}
-                onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
+            <div className="my-list-item__content">
+              <button
+                type="button"
+                className="my-list-item__title"
+                onClick={() => navigate(`/anime/${entry.animeId}`)}
               >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {STATUS_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`note-select note-select--${entry.note ?? 'none'}`}
-                value={entry.note ?? ''}
-                aria-label={`Note de ${entry.title}`}
-                onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
-              >
-                <option value="">{NOTE_LABELS['']}</option>
-                {NOTE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {NOTE_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={entry.comment}
-                aria-label={`Commentaire pour ${entry.title}`}
-                onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
-              />
-              {entry.excluded && (
-                <button type="button" onClick={() => updateEntry(entry.animeId, { excluded: false })}>
-                  Retirer de la liste des exclus
-                </button>
-              )}
-              <button type="button" onClick={() => handleRemove(entry.animeId)}>
-                Supprimer
+                {entry.title}
               </button>
+              <div className="my-list-item__fields">
+                <select
+                  className={`status-select status-select--${entry.status}`}
+                  value={entry.status}
+                  aria-label={`Statut de ${entry.title}`}
+                  onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {STATUS_LABELS[option]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={`note-select note-select--${entry.note ?? 'none'}`}
+                  value={entry.note ?? ''}
+                  aria-label={`Note de ${entry.title}`}
+                  onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
+                >
+                  <option value="">{NOTE_LABELS['']}</option>
+                  {NOTE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {NOTE_LABELS[option]}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={entry.comment}
+                  aria-label={`Commentaire pour ${entry.title}`}
+                  onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
+                />
+                {entry.excluded && (
+                  <button type="button" onClick={() => updateEntry(entry.animeId, { excluded: false })}>
+                    Retirer de la liste des exclus
+                  </button>
+                )}
+                <button type="button" onClick={() => handleRemove(entry.animeId)}>
+                  Supprimer
+                </button>
+              </div>
             </div>
           </li>
         ))}

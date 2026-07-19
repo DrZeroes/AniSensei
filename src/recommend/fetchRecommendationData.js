@@ -10,11 +10,43 @@ const SUPPLEMENT_PER_PAGE = 30;
 // "recommendations" — they come from a separate relations query — so they need a
 // strong rating boost to reliably outrank generic cross-title recommendations.
 const RELATION_RATING_BOOST = 100;
+// AniList only links directly-adjacent franchise entries (e.g. movie 8 links to
+// movie 7 and its own sequel, not the whole series) — walk that graph outward a
+// few hops so a full linear franchise (sequel-of-a-sequel...) surfaces, capped
+// so a sprawling franchise (dozens of side stories) can't trigger runaway calls.
+const MAX_RELATION_HOPS = 6;
+const MAX_RELATION_NODES = 25;
 
 export function getExcludedIds() {
   return getList()
     .filter((entry) => entry.status === 'vu' || entry.excluded)
     .map((entry) => entry.animeId);
+}
+
+async function getFranchiseNetwork(baseAnimeIds) {
+  const visited = new Set(baseAnimeIds);
+  const collected = [];
+  let frontier = [...baseAnimeIds];
+
+  for (
+    let hop = 0;
+    hop < MAX_RELATION_HOPS && frontier.length > 0 && collected.length < MAX_RELATION_NODES;
+    hop += 1
+  ) {
+    const relationLists = await Promise.all(frontier.map((id) => getAnimeRelations(id)));
+    const nextFrontier = [];
+    for (const relations of relationLists) {
+      for (const media of relations) {
+        if (visited.has(media.id) || collected.length >= MAX_RELATION_NODES) continue;
+        visited.add(media.id);
+        collected.push(media);
+        nextFrontier.push(media.id);
+      }
+    }
+    frontier = nextFrontier;
+  }
+
+  return collected;
 }
 
 // Fetches one more page of popular, genre-matched candidates so "Voir d'autres"
@@ -50,10 +82,8 @@ export async function fetchRecommendationData(baseAnimeIds) {
   const recommendationLists = await Promise.all(
     baseAnimeIds.map((id) => getAnimeRecommendations(id))
   );
-  const relationLists = await Promise.all(baseAnimeIds.map((id) => getAnimeRelations(id)));
-  const relationNodes = relationLists
-    .flat()
-    .map((media) => ({ rating: RELATION_RATING_BOOST, media, isRelation: true }));
+  const relationMedia = await getFranchiseNetwork(baseAnimeIds);
+  const relationNodes = relationMedia.map((media) => ({ rating: RELATION_RATING_BOOST, media, isRelation: true }));
   const recommendationNodes = [...recommendationLists.flat(), ...relationNodes];
 
   const localList = getList();

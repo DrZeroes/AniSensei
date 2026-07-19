@@ -119,6 +119,44 @@ describe('fetchRecommendationData', () => {
     expect(pool[0].media.id).toBe(40);
   });
 
+  it('walks multiple hops of relations to surface a whole linear franchise', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([]);
+    const chapter2 = { id: 40, genres: ['Action'], studios: ['Ufotable'] };
+    const chapter3 = { id: 41, genres: ['Action'], studios: ['Ufotable'] };
+    // AniList only links adjacent entries: base(1) -> chapter2(40) -> chapter3(41).
+    getAnimeRelations.mockImplementation((id) => {
+      if (id === 1) return Promise.resolve([chapter2]);
+      if (id === 40) return Promise.resolve([chapter3]);
+      return Promise.resolve([]);
+    });
+    getList.mockReturnValue([]);
+
+    const { pool } = await fetchRecommendationData([1]);
+
+    expect(pool.map((entry) => entry.media.id)).toEqual(expect.arrayContaining([40, 41]));
+    expect(getAnimeRelations).toHaveBeenCalledWith(40);
+    expect(getAnimeRelations).toHaveBeenCalledWith(41);
+  });
+
+  it('stops walking relations once a chain loops back on itself', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([]);
+    const chapter2 = { id: 40, genres: ['Action'], studios: [] };
+    // chapter2's relations point right back at the base anime.
+    getAnimeRelations.mockImplementation((id) => {
+      if (id === 1) return Promise.resolve([chapter2]);
+      if (id === 40) return Promise.resolve([baseMedia]);
+      return Promise.resolve([]);
+    });
+    getList.mockReturnValue([]);
+
+    const { pool } = await fetchRecommendationData([1]);
+
+    expect(pool.map((entry) => entry.media.id)).toEqual([40]);
+    expect(getAnimeRelations).toHaveBeenCalledTimes(2); // id 1, then id 40 — not id 1 again
+  });
+
   it('does not recommend a franchise relation the user has already watched', async () => {
     getAnimeDetails.mockResolvedValue(baseMedia);
     getAnimeRecommendations.mockResolvedValue([]);

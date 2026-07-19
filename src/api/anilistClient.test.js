@@ -42,4 +42,38 @@ describe('anilistQuery', () => {
 
     await expect(anilistQuery('query {}')).rejects.toThrow('Invalid token');
   });
+
+  it('retries a 429 rate-limit response honoring Retry-After, then succeeds', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: { get: () => '0.01' },
+        json: async () => ({}),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { Media: { id: 1 } } }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const data = await anilistQuery('query {}');
+
+    expect(data).toEqual({ Media: { id: 1 } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up and throws after exceeding the retry limit on repeated 429s', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => '0.01' },
+      json: async () => ({}),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(anilistQuery('query {}')).rejects.toThrow('statut 429');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });

@@ -29,10 +29,33 @@ const NOTE_LABELS = {
   pas_aime: '👎 Pas aimé',
 };
 
+// Mirrors the categories shown on the Stats page so the counts there match what
+// filtering to that tab here shows.
 const TABS = [
-  { id: 'vus', label: 'Mes animes vus' },
-  { id: 'exclus', label: 'Animes à ne plus me recommander' },
+  { id: 'vus', label: 'Vus' },
+  { id: 'a_voir', label: 'À voir' },
+  { id: 'coup_de_coeur', label: 'Coups de cœur' },
+  { id: 'aime', label: 'Aimés' },
+  { id: 'pas_aime', label: 'Pas aimés' },
+  { id: 'exclus', label: 'Exclus' },
 ];
+
+function matchesTab(entry, tab) {
+  switch (tab) {
+    case 'vus':
+      return entry.status === 'vu';
+    case 'a_voir':
+      return entry.status === 'a_voir' && !entry.excluded;
+    case 'coup_de_coeur':
+    case 'aime':
+    case 'pas_aime':
+      return entry.note === tab;
+    case 'exclus':
+      return entry.excluded;
+    default:
+      return true;
+  }
+}
 
 function MyList() {
   const navigate = useNavigate();
@@ -42,9 +65,7 @@ function MyList() {
   const [pendingImport, setPendingImport] = useState(null);
 
   const visibleList = useMemo(() => {
-    const items = list.filter((entry) =>
-      activeTab === 'exclus' ? entry.excluded : entry.status === 'vu'
-    );
+    const items = list.filter((entry) => matchesTab(entry, activeTab));
     return [...items].sort((a, b) => {
       const aValue = Array.isArray(a[sortField]) ? a[sortField][0] ?? '' : a[sortField] ?? '';
       const bValue = Array.isArray(b[sortField]) ? b[sortField][0] ?? '' : b[sortField] ?? '';

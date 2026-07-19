@@ -334,6 +334,14 @@ button:focus-visible {
   transform: translateY(-3px);
 }
 
+/* Flex items keep a stacking context from the card-reveal animation's lingering
+   transform even after it ends, so a later card in the grid paints over an
+   earlier card's open score tooltip. Raise the active card above its siblings. */
+.anime-card:hover,
+.anime-card:focus-within {
+  z-index: 5;
+}
+
 .anime-card__cover {
   display: block;
   width: 100%;

@@ -42,7 +42,6 @@ function SearchBar({ onSelect, onQuickAddSeen }) {
 
   function handleQuickAddSeen(anime) {
     onQuickAddSeen(anime);
-    setTerm('');
   }
 
   return (

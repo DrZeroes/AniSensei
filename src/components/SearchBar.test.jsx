@@ -61,7 +61,7 @@ describe('SearchBar', () => {
     expect(screen.queryByRole('button', { name: /Marquer/ })).not.toBeInTheDocument();
   });
 
-  it('calls onQuickAddSeen (and clears the search) without calling onSelect', async () => {
+  it('calls onQuickAddSeen and keeps the search results so the title can still be picked', async () => {
     searchAnime.mockResolvedValue([{ id: 1, title: 'One Piece' }]);
     const onSelect = vi.fn();
     const onQuickAddSeen = vi.fn();
@@ -74,7 +74,11 @@ describe('SearchBar', () => {
 
     expect(onQuickAddSeen).toHaveBeenCalledWith({ id: 1, title: 'One Piece' });
     expect(onSelect).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Rechercher un anime')).toHaveValue('');
+    expect(screen.getByLabelText('Rechercher un anime')).toHaveValue('One Piece');
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'One Piece' }));
+    expect(onSelect).toHaveBeenCalledWith({ id: 1, title: 'One Piece' });
   });
 
   it('shows an error message when the search fails', async () => {

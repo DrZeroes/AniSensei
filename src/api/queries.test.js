@@ -199,6 +199,34 @@ describe('browseCatalogue', () => {
     expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ genres: null }));
   });
 
+  it('omits year and format from the variables when not provided', async () => {
+    // AniList treats an explicit `seasonYear: null` / `format: null` as "field IS
+    // NULL" rather than "no filter", collapsing results to almost nothing — so
+    // these keys must be absent from the variables object entirely, not null.
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ genres: ['Action'] });
+
+    const variables = anilistQuery.mock.calls[0][1];
+    expect(variables).not.toHaveProperty('year');
+    expect(variables).not.toHaveProperty('format');
+  });
+
+  it('sends year and format when provided', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ year: 2020, format: 'TV' });
+
+    expect(anilistQuery).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ year: 2020, format: 'TV' })
+    );
+  });
+
   it('filters by studio client-side when provided', async () => {
     anilistQuery.mockResolvedValue({
       Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },

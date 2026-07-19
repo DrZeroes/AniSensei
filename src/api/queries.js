@@ -198,8 +198,11 @@ export async function browseCatalogue({
     page,
     perPage,
     genres: genres.length > 0 ? genres : null,
-    year,
-    format,
+    // AniList treats an explicit `null` for these scalar filters as "field IS NULL"
+    // rather than "no filter", unlike list filters like genre_in — so they must be
+    // omitted from the variables entirely (not sent as null) when unset.
+    ...(year !== null ? { year } : {}),
+    ...(format !== null ? { format } : {}),
     sort,
   });
   let media = data.Page.media

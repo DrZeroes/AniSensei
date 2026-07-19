@@ -45,7 +45,7 @@ describe('MyList', () => {
     expect(screen.getByText('One Piece')).toBeInTheDocument();
   });
 
-  it('shows only watched anime on the "Mes animes vus" tab by default', () => {
+  it('shows only watched anime on the "Vus" tab by default', () => {
     getList.mockReturnValue([entry, { ...entry, animeId: 2, title: 'Naruto', status: 'a_voir' }]);
 
     renderMyList();
@@ -54,7 +54,7 @@ describe('MyList', () => {
     expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
   });
 
-  it('shows only excluded anime on the "Animes à ne plus me recommander" tab', async () => {
+  it('shows only excluded anime on the "Exclus" tab', async () => {
     getList.mockReturnValue([
       entry,
       { ...entry, animeId: 3, title: 'Bad Anime', status: 'a_voir', excluded: true },
@@ -62,10 +62,44 @@ describe('MyList', () => {
     const user = userEvent.setup();
 
     renderMyList();
-    await user.click(screen.getByRole('tab', { name: 'Animes à ne plus me recommander' }));
+    await user.click(screen.getByRole('tab', { name: 'Exclus' }));
 
     expect(screen.getByText('Bad Anime')).toBeInTheDocument();
     expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+  });
+
+  it('shows anime still to watch on the "À voir" tab, excluding excluded ones', async () => {
+    getList.mockReturnValue([
+      entry,
+      { ...entry, animeId: 2, title: 'Naruto', status: 'a_voir', excluded: false },
+      { ...entry, animeId: 3, title: 'Bad Anime', status: 'a_voir', excluded: true },
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.click(screen.getByRole('tab', { name: 'À voir' }));
+
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bad Anime')).not.toBeInTheDocument();
+  });
+
+  it('filters by note on the "Aimés" and "Pas aimés" tabs', async () => {
+    getList.mockReturnValue([
+      entry, // note: coup_de_coeur
+      { ...entry, animeId: 2, title: 'Naruto', note: 'aime' },
+      { ...entry, animeId: 3, title: 'Bad Anime', note: 'pas_aime' },
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.click(screen.getByRole('tab', { name: 'Aimés' }));
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Pas aimés' }));
+    expect(screen.getByText('Bad Anime')).toBeInTheDocument();
+    expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
   });
 
   it('sorts entries alphabetically by title by default', () => {

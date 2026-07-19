@@ -50,4 +50,25 @@ describe('fetchDiscoveryPick', () => {
 
     expect(result).toBeNull();
   });
+
+  it('falls back to a shallower popularity page when the deep page has no usable results', async () => {
+    browseCatalogue
+      .mockResolvedValueOnce({ media: [], hasNextPage: false })
+      .mockResolvedValueOnce({ media: [matching], hasNextPage: true });
+
+    const result = await fetchDiscoveryPick(baseList, [], [], () => 0);
+
+    expect(browseCatalogue).toHaveBeenCalledTimes(2);
+    expect(browseCatalogue.mock.calls[1][0]).toMatchObject({ page: 3 });
+    expect(result.media.id).toBe(10);
+  });
+
+  it('returns null when both the deep and fallback pages have no usable results', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+
+    const result = await fetchDiscoveryPick(baseList, [], [], () => 0);
+
+    expect(browseCatalogue).toHaveBeenCalledTimes(2);
+    expect(result).toBeNull();
+  });
 });

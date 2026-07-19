@@ -249,6 +249,27 @@ describe('Home', () => {
     expect(screen.getByText('Obscure Gem')).toBeInTheDocument();
   });
 
+  it('keeps existing results visible when "Voir d\'autres" finds nothing new', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: null,
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+    await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+    await waitFor(() => screen.getByText('Tsukihime'));
+
+    await user.click(screen.getByRole('button', { name: "Voir d'autres" }));
+
+    expect(screen.getByText('Tsukihime')).toBeInTheDocument();
+    expect(screen.getByText('Plus de suggestions dans ce lot, relance une recherche.')).toBeInTheDocument();
+  });
+
   it('resets the recommendation results when "Réinitialiser" is clicked', async () => {
     fetchRecommendationData.mockResolvedValue({
       pool: [{ media: candidate, score: 10 }],

@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchRecommendationData } from './fetchRecommendationData.js';
-import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
+import { getAnimeDetails, getAnimeRecommendations, browseCatalogue } from '../api/queries.js';
 import { getList } from '../storage/listStorage.js';
 import { fetchDiscoveryPick } from './discovery.js';
 
 vi.mock('../api/queries.js', () => ({
   getAnimeDetails: vi.fn(),
   getAnimeRecommendations: vi.fn(),
+  browseCatalogue: vi.fn(),
 }));
 
 vi.mock('../storage/listStorage.js', () => ({
@@ -15,6 +16,7 @@ vi.mock('../storage/listStorage.js', () => ({
 
 vi.mock('./discovery.js', () => ({
   fetchDiscoveryPick: vi.fn(),
+  pickDominantGenre: vi.fn((baseList) => baseList[0]?.genres?.[0] ?? null),
 }));
 
 const baseMedia = { id: 1, genres: ['Action'], studios: ['Ufotable'] };
@@ -26,6 +28,7 @@ describe('fetchRecommendationData', () => {
     getAnimeDetails.mockReset();
     getAnimeRecommendations.mockReset();
     getList.mockReset();
+    browseCatalogue.mockReset().mockResolvedValue({ media: [], hasNextPage: false });
     fetchDiscoveryPick.mockReset().mockResolvedValue(null);
   });
 
@@ -70,5 +73,34 @@ describe('fetchRecommendationData', () => {
     const { discoveryPick } = await fetchRecommendationData([1]);
 
     expect(discoveryPick).toEqual({ media: { id: 99, title: 'Obscure Anime' }, score: 3 });
+  });
+
+  it('tops up a thin pool with popular genre-matched anime from the catalogue', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([{ rating: 10, media: recommended }]);
+    getList.mockReturnValue([]);
+    const extra = { id: 20, genres: ['Action'], studios: [] };
+    browseCatalogue.mockResolvedValue({ media: [extra], hasNextPage: true });
+
+    const { pool } = await fetchRecommendationData([1]);
+
+    expect(browseCatalogue).toHaveBeenCalledWith(
+      expect.objectContaining({ genres: ['Action'], sort: ['POPULARITY_DESC'] })
+    );
+    expect(pool.map((entry) => entry.media.id)).toContain(20);
+  });
+
+  it('does not query the catalogue when the pool is already large enough', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    const manyNodes = Array.from({ length: 12 }, (_, index) => ({
+      rating: index,
+      media: { id: 100 + index, genres: ['Action'], studios: [] },
+    }));
+    getAnimeRecommendations.mockResolvedValue(manyNodes);
+    getList.mockReturnValue([]);
+
+    await fetchRecommendationData([1]);
+
+    expect(browseCatalogue).not.toHaveBeenCalled();
   });
 });

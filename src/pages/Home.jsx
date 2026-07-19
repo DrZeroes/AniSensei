@@ -91,8 +91,10 @@ function Home() {
 
   function handleSeeMore() {
     const { picked, exhausted } = pickWeighted(pool, 5, shownIds);
-    setShownIds((prev) => [...prev, ...picked.map((entry) => entry.media.id)]);
-    setResults(picked);
+    if (picked.length > 0) {
+      setShownIds((prev) => [...prev, ...picked.map((entry) => entry.media.id)]);
+      setResults(picked);
+    }
     setStatus(exhausted ? 'exhausted' : 'idle');
   }
 

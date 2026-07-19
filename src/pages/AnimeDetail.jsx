@@ -64,22 +64,34 @@ function AnimeDetail() {
   if (!anime) return null;
 
   return (
-    <section>
+    <section className="anime-detail">
       <h2>{anime.title}</h2>
       {anime.coverImage && <img src={anime.coverImage} alt={anime.title} />}
       <p>{anime.description}</p>
-      <p>Genres : {anime.genres.join(', ')}</p>
-      <p>Tags : {anime.tags.join(', ')}</p>
-      <p>Studios : {anime.studios.join(', ')}</p>
       <p>
-        Année : {anime.seasonYear ?? 'Pas encore diffusé'} · Format : {anime.format} · Épisodes :{' '}
-        {anime.episodes ?? '?'} · Score : {anime.averageScore ?? '?'}
+        <span className="anime-detail__label">Genres</span> : {anime.genres.join(', ')}
+      </p>
+      <p>
+        <span className="anime-detail__label">Tags</span> : {anime.tags.join(', ')}
+      </p>
+      <p>
+        <span className="anime-detail__label">Studios</span> : {anime.studios.join(', ')}
+      </p>
+      <p>
+        <span className="anime-detail__label">Année</span> : {anime.seasonYear ?? 'Pas encore diffusé'} ·{' '}
+        <span className="anime-detail__label">Format</span> : {anime.format} ·{' '}
+        <span className="anime-detail__label">Épisodes</span> : {anime.episodes ?? '?'} ·{' '}
+        <span className="anime-detail__label">Score</span> : {anime.averageScore ?? '?'}
       </p>
 
       <div className="anime-detail__personal">
         <label>
-          Statut
-          <select value={entry?.status ?? 'a_voir'} onChange={(event) => updateEntry({ status: event.target.value })}>
+          <span className="anime-detail__label">Statut</span>
+          <select
+            className={`status-select status-select--${entry?.status ?? 'a_voir'}`}
+            value={entry?.status ?? 'a_voir'}
+            onChange={(event) => updateEntry({ status: event.target.value })}
+          >
             {STATUS_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -88,8 +100,12 @@ function AnimeDetail() {
           </select>
         </label>
         <label>
-          Note
-          <select value={entry?.note ?? ''} onChange={(event) => updateEntry({ note: event.target.value || null })}>
+          <span className="anime-detail__label">Note</span>
+          <select
+            className={`note-select note-select--${entry?.note ?? 'none'}`}
+            value={entry?.note ?? ''}
+            onChange={(event) => updateEntry({ note: event.target.value || null })}
+          >
             <option value="">Pas de note</option>
             {NOTE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -99,7 +115,7 @@ function AnimeDetail() {
           </select>
         </label>
         <label>
-          Commentaire
+          <span className="anime-detail__label">Commentaire</span>
           <input
             type="text"
             value={entry?.comment ?? ''}

@@ -7,6 +7,7 @@ import {
   getAnimeRelations,
   browseCatalogue,
   getGenreCollection,
+  getTagCollection,
   clearQueryCache,
 } from './queries.js';
 
@@ -19,6 +20,7 @@ const sampleMedia = {
   title: { romaji: 'One Piece', english: 'One Piece' },
   coverImage: { large: 'https://img/one-piece.jpg' },
   genres: ['Action', 'Adventure'],
+  tags: [{ name: 'Pirates' }],
   averageScore: 88,
   seasonYear: 1999,
   format: 'TV',
@@ -51,6 +53,7 @@ describe('searchAnime', () => {
         title: 'One Piece',
         coverImage: 'https://img/one-piece.jpg',
         genres: ['Action', 'Adventure'],
+        tags: ['Pirates'],
         averageScore: 88,
         seasonYear: 1999,
         format: 'TV',
@@ -199,6 +202,29 @@ describe('browseCatalogue', () => {
     expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ genres: null }));
   });
 
+  it('sends selected tags as a single tag_in filter', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ tags: ['Time Skip', 'Tsundere'] });
+
+    expect(anilistQuery).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ tags: ['Time Skip', 'Tsundere'] })
+    );
+  });
+
+  it('sends no tag filter when the tags list is empty', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ tags: [] });
+
+    expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ tags: null }));
+  });
+
   it('omits year and format from the variables when not provided', async () => {
     // AniList treats an explicit `seasonYear: null` / `format: null` as "field IS
     // NULL" rather than "no filter", collapsing results to almost nothing — so
@@ -274,5 +300,38 @@ describe('getGenreCollection', () => {
 
     expect(genres.length).toBeGreaterThan(0);
     expect(genres).not.toContain('Hentai');
+  });
+});
+
+describe('getTagCollection', () => {
+  it('returns tag names, excluding adult tags, sorted alphabetically', async () => {
+    anilistQuery.mockResolvedValue({
+      MediaTagCollection: [
+        { name: 'Time Skip', isAdult: false },
+        { name: 'Explicit Sex', isAdult: true },
+        { name: 'Achronological Order', isAdult: false },
+      ],
+    });
+
+    const tags = await getTagCollection();
+
+    expect(tags).toEqual(['Achronological Order', 'Time Skip']);
+  });
+
+  it('caches the result across calls', async () => {
+    anilistQuery.mockResolvedValue({ MediaTagCollection: [{ name: 'Time Skip', isAdult: false }] });
+
+    await getTagCollection();
+    await getTagCollection();
+
+    expect(anilistQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to an empty list when the request fails', async () => {
+    anilistQuery.mockRejectedValue(new Error('network'));
+
+    const tags = await getTagCollection();
+
+    expect(tags).toEqual([]);
   });
 });

@@ -6,6 +6,7 @@ function mapMediaSummary(media) {
     title: media.title.english || media.title.romaji,
     coverImage: media.coverImage?.large ?? null,
     genres: media.genres ?? [],
+    tags: (media.tags ?? []).map((tag) => tag.name),
     averageScore: media.averageScore ?? null,
     seasonYear: media.seasonYear ?? null,
     format: media.format ?? null,
@@ -17,11 +18,13 @@ function mapMediaSummary(media) {
 const searchCache = new Map();
 const detailsCache = new Map();
 let genreCollectionCache = null;
+let tagCollectionCache = null;
 
 export function clearQueryCache() {
   searchCache.clear();
   detailsCache.clear();
   genreCollectionCache = null;
+  tagCollectionCache = null;
 }
 
 const SEARCH_QUERY = `
@@ -32,6 +35,7 @@ const SEARCH_QUERY = `
         title { romaji english }
         coverImage { large }
         genres
+        tags { name }
         averageScore
         seasonYear
         format
@@ -79,7 +83,6 @@ export async function getAnimeDetails(id) {
   const result = {
     ...mapMediaSummary(media),
     description: media.description ?? '',
-    tags: (media.tags ?? []).map((tag) => tag.name),
     episodes: media.episodes ?? null,
     staff: (media.staff?.edges ?? []).map((edge) => ({
       role: edge.role,
@@ -101,6 +104,7 @@ const RECOMMENDATIONS_QUERY = `
             title { romaji english }
             coverImage { large }
             genres
+            tags { name }
             averageScore
             seasonYear
             format
@@ -135,6 +139,7 @@ const RELATIONS_QUERY = `
             title { romaji english }
             coverImage { large }
             genres
+            tags { name }
             averageScore
             seasonYear
             format
@@ -159,7 +164,15 @@ export async function getAnimeRelations(id) {
 }
 
 const CATALOGUE_QUERY = `
-  query ($page: Int, $perPage: Int, $genres: [String], $year: Int, $format: MediaFormat, $sort: [MediaSort]) {
+  query (
+    $page: Int
+    $perPage: Int
+    $genres: [String]
+    $tags: [String]
+    $year: Int
+    $format: MediaFormat
+    $sort: [MediaSort]
+  ) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { hasNextPage }
       media(
@@ -167,6 +180,7 @@ const CATALOGUE_QUERY = `
         isAdult: false
         status_not: NOT_YET_RELEASED
         genre_in: $genres
+        tag_in: $tags
         seasonYear: $year
         format: $format
         sort: $sort
@@ -175,6 +189,7 @@ const CATALOGUE_QUERY = `
         title { romaji english }
         coverImage { large }
         genres
+        tags { name }
         averageScore
         seasonYear
         format
@@ -189,6 +204,7 @@ export async function browseCatalogue({
   page = 1,
   perPage = 20,
   genres = [],
+  tags = [],
   year = null,
   format = null,
   studio = null,
@@ -198,9 +214,10 @@ export async function browseCatalogue({
     page,
     perPage,
     genres: genres.length > 0 ? genres : null,
+    tags: tags.length > 0 ? tags : null,
     // AniList treats an explicit `null` for these scalar filters as "field IS NULL"
-    // rather than "no filter", unlike list filters like genre_in — so they must be
-    // omitted from the variables entirely (not sent as null) when unset.
+    // rather than "no filter", unlike list filters like genre_in/tag_in — so they
+    // must be omitted from the variables entirely (not sent as null) when unset.
     ...(year !== null ? { year } : {}),
     ...(format !== null ? { format } : {}),
     sort,
@@ -255,4 +272,27 @@ export async function getGenreCollection() {
     genreCollectionCache = FALLBACK_GENRES;
   }
   return genreCollectionCache;
+}
+
+const TAG_COLLECTION_QUERY = `
+  query {
+    MediaTagCollection {
+      name
+      isAdult
+    }
+  }
+`;
+
+export async function getTagCollection() {
+  if (tagCollectionCache) return tagCollectionCache;
+  try {
+    const data = await anilistQuery(TAG_COLLECTION_QUERY);
+    tagCollectionCache = (data.MediaTagCollection ?? [])
+      .filter((tag) => !tag.isAdult)
+      .map((tag) => tag.name)
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    tagCollectionCache = [];
+  }
+  return tagCollectionCache;
 }

@@ -123,7 +123,7 @@ describe('AnimeCard', () => {
   });
 
   it('shows a rarity tag and frame for a strong match', () => {
-    const rarity = rarityFor(30); // legendary
+    const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
     const { container } = render(<AnimeCard anime={anime} score={30} rarity={rarity} />);
 
     expect(screen.getByText('Légendaire')).toBeInTheDocument();
@@ -131,7 +131,7 @@ describe('AnimeCard', () => {
   });
 
   it('shows no rarity tag or frame for a common-tier match', () => {
-    const rarity = rarityFor(2); // common
+    const rarity = rarityFor(2, [30, 20, 10, 2]); // common
     const { container } = render(<AnimeCard anime={anime} score={2} rarity={rarity} />);
 
     expect(screen.queryByText('Commun')).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ describe('AnimeCard', () => {
   });
 
   it('never shows the bonus and rarity tags together', () => {
-    const rarity = rarityFor(30); // legendary
+    const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
     render(<AnimeCard anime={anime} score={30} bonus bonusReason="Pépite." rarity={rarity} />);
 
     expect(screen.getByRole('button', { name: 'Bonus' })).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe('AnimeCard', () => {
   });
 
   it('does not leak the rarity of a face-down card in gacha mode', () => {
-    const rarity = rarityFor(30); // legendary
+    const rarity = rarityFor(30, [30, 20, 10, 2]); // legendary
     const { container } = render(<AnimeCard anime={anime} score={30} rarity={rarity} gacha />);
 
     expect(screen.queryByText('Légendaire')).not.toBeInTheDocument();

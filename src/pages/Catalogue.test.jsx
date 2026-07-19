@@ -3,15 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Catalogue from './Catalogue.jsx';
-import { browseCatalogue, getGenreCollection } from '../api/queries.js';
-import { getList } from '../storage/listStorage.js';
+import { browseCatalogue, getGenreCollection, getTagCollection } from '../api/queries.js';
+import { getList, upsertAnime } from '../storage/listStorage.js';
 
 vi.mock('../api/queries.js', () => ({
   browseCatalogue: vi.fn(),
   getGenreCollection: vi.fn(),
+  getTagCollection: vi.fn(),
 }));
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(() => []),
+  upsertAnime: vi.fn(),
 }));
 
 function renderCatalogue() {
@@ -26,7 +28,9 @@ describe('Catalogue', () => {
   beforeEach(() => {
     browseCatalogue.mockReset();
     getGenreCollection.mockReset().mockResolvedValue(['Action', 'Comedy']);
+    getTagCollection.mockReset().mockResolvedValue(['Time Skip', 'Tsundere', 'Time Travel']);
     getList.mockReset().mockReturnValue([]);
+    upsertAnime.mockReset();
   });
 
   it('loads and displays the first page on mount', async () => {
@@ -118,6 +122,43 @@ describe('Catalogue', () => {
     );
   });
 
+  it('shows matching tags only once the user starts typing, capped to a manageable list', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+
+    expect(screen.queryByRole('button', { name: 'Time Skip' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Rechercher un tag'), 'time');
+
+    expect(screen.getByRole('button', { name: 'Time Skip' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Time Travel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tsundere' })).not.toBeInTheDocument();
+  });
+
+  it('adds a tag to the filter and clears the search, then lets it be removed', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText('Rechercher un tag'), 'time skip');
+    await user.click(screen.getByRole('button', { name: 'Time Skip' }));
+
+    expect(screen.getByLabelText('Rechercher un tag')).toHaveValue('');
+    await waitFor(() =>
+      expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['Time Skip'] }))
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Retirer le tag Time Skip' }));
+    await waitFor(() =>
+      expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }))
+    );
+  });
+
   it('shows the list badge for anime already present in the local list', async () => {
     getList.mockReset().mockReturnValue([{ animeId: 1, status: 'vu', note: null, excluded: false }]);
     browseCatalogue.mockResolvedValue({
@@ -129,6 +170,36 @@ describe('Catalogue', () => {
 
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
     expect(screen.getByText('Vu')).toBeInTheDocument();
+  });
+
+  it('marks an anime as seen via the quick action and shows a confirmation badge', async () => {
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => screen.getByText('One Piece'));
+    await user.click(screen.getByRole('button', { name: 'Déjà vu' }));
+
+    expect(upsertAnime).toHaveBeenCalledWith(expect.objectContaining({ animeId: 1, status: 'vu' }));
+    expect(screen.getByText('Vu')).toBeInTheDocument();
+  });
+
+  it('excludes an anime via the quick action and shows a confirmation badge', async () => {
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => screen.getByText('One Piece'));
+    await user.click(screen.getByRole('button', { name: 'Ne plus recommander' }));
+
+    expect(upsertAnime).toHaveBeenCalledWith(expect.objectContaining({ animeId: 1, excluded: true }));
+    expect(screen.getByText('Exclu')).toBeInTheDocument();
   });
 
   it('disables "Charger plus" while a fetch is in flight and ignores a second rapid click', async () => {

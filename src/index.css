@@ -304,6 +304,59 @@ button:focus-visible {
   accent-color: var(--accent-2);
 }
 
+/* Tag filter */
+
+.tag-filter {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem 0.75rem;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tag-filter legend {
+  padding: 0 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tag-filter__selected,
+.tag-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-filter__options {
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.tag-filter__empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated-2);
+  font-size: 0.82rem;
+}
+
+.tag-chip--selected {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 /* Card grids */
 
 .results-grid,
@@ -318,6 +371,28 @@ button:focus-visible {
   perspective: 1000px;
 }
 
+.see-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.75rem;
+}
+
+.see-more-button {
+  padding: 0.7rem 1.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--accent-2);
+  background: var(--bg-elevated);
+  color: var(--accent-2);
+}
+
+.see-more-button:hover:not(:disabled) {
+  background: var(--bg-elevated-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* AnimeCard */
 
 .anime-card {
@@ -329,6 +404,14 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   transition: transform 0.15s ease;
+}
+
+/* Narrow phones only fit a single 200px-wide card per row, wasting most of the
+   screen width — shrink to two per row instead. */
+@media (max-width: 639px) {
+  .anime-card {
+    width: calc(50% - 0.5rem);
+  }
 }
 
 .anime-card:hover {
@@ -1059,6 +1142,46 @@ button:focus-visible {
 .note-select--none {
   border-color: var(--border);
   color: var(--text-muted);
+}
+
+/* Anime detail page */
+
+.anime-detail h2,
+.anime-detail h3,
+.anime-detail__label {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.anime-detail__label {
+  font-weight: 700;
+  font-style: italic;
+  color: var(--accent-2);
+}
+
+.anime-detail__personal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.anime-detail__personal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.anime-detail__personal .status-select,
+.anime-detail__personal .note-select {
+  font-size: 1rem;
+  padding: 0.45rem 0.8rem;
 }
 
 /* About page */

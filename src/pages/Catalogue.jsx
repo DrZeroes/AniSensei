@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard.jsx';
-import { browseCatalogue, getGenreCollection } from '../api/queries.js';
-import { getList } from '../storage/listStorage.js';
+import { browseCatalogue, getGenreCollection, getTagCollection } from '../api/queries.js';
+import { getList, upsertAnime } from '../storage/listStorage.js';
 
 const SORT_OPTIONS = [
   { value: 'POPULARITY_DESC', label: 'Popularité' },
@@ -11,16 +11,24 @@ const SORT_OPTIONS = [
   { value: 'TITLE_ROMAJI', label: 'Titre' },
 ];
 
+// AniList has 400+ tags — rendering them all as checkboxes would swamp the page,
+// so matches are only shown once the user types, and capped to a manageable list.
+const MAX_TAG_MATCHES = 20;
+
 function Catalogue() {
   const navigate = useNavigate();
   const [availableGenres, setAvailableGenres] = useState([]);
   const [genres, setGenres] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [tagQuery, setTagQuery] = useState('');
   const [year, setYear] = useState('');
   const [sort, setSort] = useState('POPULARITY_DESC');
   const [page, setPage] = useState(1);
   const [media, setMedia] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [status, setStatus] = useState('idle');
+  const [markedEntries, setMarkedEntries] = useState({});
   const requestIdRef = useRef(0);
 
   async function loadPage(targetPage, replace) {
@@ -30,6 +38,7 @@ function Catalogue() {
       const result = await browseCatalogue({
         page: targetPage,
         genres,
+        tags,
         year: year ? Number(year) : null,
         sort: [sort],
       });
@@ -45,17 +54,34 @@ function Catalogue() {
 
   useEffect(() => {
     getGenreCollection().then(setAvailableGenres);
+    getTagCollection().then(setAvailableTags);
   }, []);
 
   useEffect(() => {
     setPage(1);
     loadPage(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [genres, year, sort]);
+  }, [genres, tags, year, sort]);
 
   function toggleGenre(genre) {
     setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]));
   }
+
+  function addTag(tag) {
+    setTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
+    setTagQuery('');
+  }
+
+  function removeTag(tag) {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }
+
+  const tagMatches =
+    tagQuery.trim().length === 0
+      ? []
+      : availableTags
+          .filter((tag) => !tags.includes(tag) && tag.toLowerCase().includes(tagQuery.trim().toLowerCase()))
+          .slice(0, MAX_TAG_MATCHES);
 
   function handleLoadMore() {
     if (status === 'loading') return;
@@ -66,7 +92,36 @@ function Catalogue() {
 
   const localList = getList();
   function findListEntry(animeId) {
-    return localList.find((entry) => entry.animeId === animeId) ?? null;
+    return markedEntries[animeId] ?? localList.find((entry) => entry.animeId === animeId) ?? null;
+  }
+
+  function handleAddSeen(anime) {
+    upsertAnime({
+      animeId: anime.id,
+      title: anime.title,
+      coverImage: anime.coverImage,
+      genres: anime.genres,
+      studios: anime.studios,
+      seasonYear: anime.seasonYear,
+      status: 'vu',
+    });
+    setMarkedEntries((prev) => ({ ...prev, [anime.id]: { status: 'vu', excluded: false, note: null } }));
+  }
+
+  function handleExclude(anime) {
+    upsertAnime({
+      animeId: anime.id,
+      title: anime.title,
+      coverImage: anime.coverImage,
+      genres: anime.genres,
+      studios: anime.studios,
+      seasonYear: anime.seasonYear,
+      excluded: true,
+    });
+    setMarkedEntries((prev) => ({
+      ...prev,
+      [anime.id]: { status: prev[anime.id]?.status ?? 'a_voir', excluded: true, note: null },
+    }));
   }
 
   return (
@@ -87,6 +142,41 @@ function Catalogue() {
               </label>
             ))}
           </div>
+        </fieldset>
+        <fieldset className="tag-filter">
+          <legend>Tags</legend>
+          {tags.length > 0 && (
+            <div className="tag-filter__selected">
+              {tags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className="tag-chip tag-chip--selected"
+                  onClick={() => removeTag(tag)}
+                  aria-label={`Retirer le tag ${tag}`}
+                >
+                  {tag} ×
+                </button>
+              ))}
+            </div>
+          )}
+          <input
+            type="text"
+            value={tagQuery}
+            onChange={(event) => setTagQuery(event.target.value)}
+            placeholder="Rechercher un tag..."
+            aria-label="Rechercher un tag"
+          />
+          {tagQuery.trim().length > 0 && (
+            <div className="tag-filter__options">
+              {tagMatches.length === 0 && <p className="tag-filter__empty">Aucun tag trouvé.</p>}
+              {tagMatches.map((tag) => (
+                <button key={tag} type="button" className="tag-chip" onClick={() => addTag(tag)}>
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </fieldset>
         <input
           type="number"
@@ -120,6 +210,8 @@ function Catalogue() {
             key={anime.id}
             anime={anime}
             listEntry={findListEntry(anime.id)}
+            onAddSeen={handleAddSeen}
+            onExclude={handleExclude}
             onClick={(item) => navigate(`/anime/${item.id}`)}
           />
         ))}

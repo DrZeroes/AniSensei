@@ -263,6 +263,34 @@ describe('Home', () => {
     expect(screen.getByText('Obscure Gem').closest('.results-grid')).not.toBeNull();
   });
 
+  it('scrolls the results grid back into view when "Voir d\'autres" is clicked', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: null,
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+    const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+
+    try {
+      renderHome();
+      await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+      await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+      await waitFor(() => screen.getByText('Tsukihime'));
+      expect(scrollSpy).not.toHaveBeenCalled(); // only on "Voir d'autres", not the initial search
+
+      await user.click(screen.getByRole('button', { name: "Voir d'autres" }));
+
+      await waitFor(() =>
+        expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth', block: 'start' }))
+      );
+    } finally {
+      scrollSpy.mockRestore();
+    }
+  });
+
   it('keeps existing results visible when "Voir d\'autres" finds nothing new anywhere', async () => {
     fetchRecommendationData.mockResolvedValue({
       pool: [{ media: candidate, score: 10 }],

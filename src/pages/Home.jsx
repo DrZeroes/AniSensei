@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
@@ -69,6 +69,7 @@ function Home() {
   const [favoritesExpanded, setFavoritesExpanded] = useState(false);
   const [seenExpanded, setSeenExpanded] = useState(false);
   const [gachaMode, setGachaModeState] = useState(() => getGachaMode());
+  const resultsRef = useRef(null);
 
   function toggleGachaMode() {
     setGachaModeState((prev) => {
@@ -173,6 +174,10 @@ function Home() {
         setResults(picked);
       }
       setStatus(picked.length > 0 ? 'idle' : 'exhausted');
+      // On mobile, "Voir d'autres" is reached by scrolling all the way down, and the
+      // page otherwise stays scrolled there even though new results just replaced
+      // the old ones above the button — bring the top of the results back into view.
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       // Always try to surface a fresh "Découverte" bonus alongside the new batch.
       const newDiscoveryPick = await fetchDiscoveryPick(baseList, favoritesList, [
@@ -230,7 +235,7 @@ function Home() {
         scoreDetail={buildScoreTooltip(entry.media, baseList, favoritesList)}
         bonus={bonus}
         bonusReason={bonus ? bonusReasonFor(baseList) : null}
-        rarity={rarityFor(entry.score)}
+        rarity={rarityFor(entry.score, pool.map((poolEntry) => poolEntry.score))}
         gacha={gachaMode}
         onAddSeen={handleAddSeen}
         onExclude={handleExclude}
@@ -323,14 +328,16 @@ function Home() {
         </p>
       )}
 
-      <div className="results-grid">
+      <div className="results-grid" ref={resultsRef}>
         {displayedCards.map(({ entry, bonus }) => renderCard(entry, { bonus }))}
       </div>
 
       {results.length > 0 && status !== 'exhausted' && (
-        <button type="button" onClick={handleSeeMore} disabled={loadingMore}>
-          {loadingMore ? 'Recherche...' : "Voir d'autres"}
-        </button>
+        <div className="see-more-wrap">
+          <button type="button" className="see-more-button" onClick={handleSeeMore} disabled={loadingMore}>
+            {loadingMore ? 'Recherche...' : "Voir d'autres"}
+          </button>
+        </div>
       )}
       {status === 'exhausted' && <p>Plus de suggestions dans ce lot, relance une recherche.</p>}
     </section>

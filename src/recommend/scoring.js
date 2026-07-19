@@ -6,18 +6,24 @@ export const WEIGHTS = {
 };
 
 // Gacha-style rarity frame, purely cosmetic — a rough read of how strongly a
-// suggestion matches the current selection. Thresholds are calibrated against
-// typical scores seen in practice (a single shared genre is ~2-5, a strong
-// franchise-relation or multi-base match routinely lands well above 15).
+// suggestion matches the current selection. Scores are unbounded (AniList's
+// community "rating" on a recommendation can add dozens of points on its own
+// for very popular titles), so a fixed absolute cutoff made almost everything
+// "Légendaire" for popular base anime. Rarity is instead based on how a score
+// ranks against the rest of the candidate pool for *this* search: the
+// fraction of the pool that scores strictly higher decides the tier.
 export const RARITY_TIERS = [
-  { id: 'legendary', label: 'Légendaire', min: 25 },
-  { id: 'epic', label: 'Épique', min: 15 },
-  { id: 'rare', label: 'Rare', min: 7 },
-  { id: 'common', label: 'Commun', min: 0 },
+  { id: 'legendary', label: 'Légendaire', maxBeaten: 0.1 },
+  { id: 'epic', label: 'Épique', maxBeaten: 0.3 },
+  { id: 'rare', label: 'Rare', maxBeaten: 0.6 },
+  { id: 'common', label: 'Commun', maxBeaten: 1 },
 ];
 
-export function rarityFor(score) {
-  return RARITY_TIERS.find((tier) => score >= tier.min) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
+export function rarityFor(score, poolScores = []) {
+  if (poolScores.length === 0) return RARITY_TIERS[RARITY_TIERS.length - 1];
+  const beatenBy = poolScores.filter((other) => other > score).length;
+  const fractionBeaten = beatenBy / poolScores.length;
+  return RARITY_TIERS.find((tier) => fractionBeaten <= tier.maxBeaten) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
 }
 
 function countOverlap(a = [], b = []) {

@@ -65,7 +65,14 @@ describe('AnimeDetail', () => {
 
     renderDetail();
 
-    await waitFor(() => expect(screen.getByText(/Année : 2006/)).toBeInTheDocument());
+    // The label and value now live in separate elements (for the label's distinct
+    // styling), so RTL's default per-node text matching can't see them as one
+    // string — match on the containing <p>'s full textContent instead.
+    await waitFor(() =>
+      expect(
+        screen.getByText((_, element) => element.tagName === 'P' && /Année : 2006/.test(element.textContent))
+      ).toBeInTheDocument()
+    );
   });
 
   it('shows "Pas encore diffusé" when no season year is available yet', async () => {
@@ -74,7 +81,13 @@ describe('AnimeDetail', () => {
 
     renderDetail();
 
-    await waitFor(() => expect(screen.getByText(/Année : Pas encore diffusé/)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          (_, element) => element.tagName === 'P' && /Année : Pas encore diffusé/.test(element.textContent)
+        )
+      ).toBeInTheDocument()
+    );
   });
 
   it('shows an error state with a retry button when the fetch fails', async () => {

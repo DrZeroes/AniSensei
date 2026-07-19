@@ -22,14 +22,33 @@ describe('scoreCandidate', () => {
 });
 
 describe('rarityFor', () => {
-  it('classifies scores into the right tier', () => {
-    expect(rarityFor(0).id).toBe('common');
-    expect(rarityFor(6.9).id).toBe('common');
-    expect(rarityFor(7).id).toBe('rare');
-    expect(rarityFor(14.9).id).toBe('rare');
-    expect(rarityFor(15).id).toBe('epic');
-    expect(rarityFor(24.9).id).toBe('epic');
-    expect(rarityFor(25).id).toBe('legendary');
-    expect(rarityFor(100).id).toBe('legendary');
+  const poolScores = [50, 45, 40, 35, 30, 25, 20, 15, 10, 5];
+
+  it('gives the top-ranked score the legendary tier', () => {
+    expect(rarityFor(50, poolScores).id).toBe('legendary');
+  });
+
+  it('gives a mid-pack score the rare tier', () => {
+    expect(rarityFor(25, poolScores).id).toBe('rare');
+  });
+
+  it('gives the lowest-ranked score the common tier', () => {
+    expect(rarityFor(5, poolScores).id).toBe('common');
+  });
+
+  it('defaults to common when there is no pool to compare against', () => {
+    expect(rarityFor(999, []).id).toBe('common');
+  });
+
+  it('is not skewed by unbounded scores, unlike a fixed absolute threshold would be', () => {
+    // Regression: scores are unbounded (AniList's community "rating" on a
+    // recommendation can add dozens of points by itself for very popular
+    // titles), so a fixed cutoff like "score >= 25" made nearly every result
+    // "Légendaire" for a popular base anime. Ranking within the pool keeps a
+    // spread across tiers even when every raw score is huge.
+    const hugePool = [320, 310, 300, 290, 280, 270, 260, 250, 240, 230];
+    expect(rarityFor(320, hugePool).id).toBe('legendary');
+    expect(rarityFor(270, hugePool).id).not.toBe('legendary');
+    expect(rarityFor(230, hugePool).id).toBe('common');
   });
 });

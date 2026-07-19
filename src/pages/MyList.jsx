@@ -11,13 +11,14 @@ import {
 
 const STATUS_OPTIONS = ['a_voir', 'vu'];
 const NOTE_OPTIONS = ['coup_de_coeur', 'aime', 'pas_aime'];
-const SORT_FIELDS = ['title', 'note', 'seasonYear', 'genres', 'studios', 'addedAt'];
+const SORT_FIELDS = ['title', 'note', 'seasonYear', 'genres', 'studios', 'tags', 'addedAt'];
 const SORT_LABELS = {
   title: 'Titre (A-Z)',
   note: 'Note',
   seasonYear: 'Année',
   genres: 'Genre',
   studios: 'Studio',
+  tags: 'Tag',
   addedAt: "Date d'ajout",
 };
 
@@ -57,21 +58,40 @@ function matchesTab(entry, tab) {
   }
 }
 
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
 function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
   const [activeTab, setActiveTab] = useState('vus');
   const [sortField, setSortField] = useState('title');
+  const [genreFilter, setGenreFilter] = useState('');
+  const [studioFilter, setStudioFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [pendingImport, setPendingImport] = useState(null);
 
+  // Options are drawn from what's actually in the list, not the full AniList
+  // catalogue — no point offering a genre/studio/tag nothing here has.
+  const availableGenres = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.genres ?? [])), [list]);
+  const availableStudios = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.studios ?? [])), [list]);
+  const availableTags = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.tags ?? [])), [list]);
+
   const visibleList = useMemo(() => {
-    const items = list.filter((entry) => matchesTab(entry, activeTab));
+    const items = list.filter(
+      (entry) =>
+        matchesTab(entry, activeTab) &&
+        (!genreFilter || (entry.genres ?? []).includes(genreFilter)) &&
+        (!studioFilter || (entry.studios ?? []).includes(studioFilter)) &&
+        (!tagFilter || (entry.tags ?? []).includes(tagFilter))
+    );
     return [...items].sort((a, b) => {
       const aValue = Array.isArray(a[sortField]) ? a[sortField][0] ?? '' : a[sortField] ?? '';
       const bValue = Array.isArray(b[sortField]) ? b[sortField][0] ?? '' : b[sortField] ?? '';
       return String(aValue).localeCompare(String(bValue));
     });
-  }, [list, activeTab, sortField]);
+  }, [list, activeTab, sortField, genreFilter, studioFilter, tagFilter]);
 
   function updateEntry(animeId, changes) {
     const updated = upsertAnime({ animeId, ...changes });
@@ -144,6 +164,30 @@ function MyList() {
           {SORT_FIELDS.map((field) => (
             <option key={field} value={field}>
               {SORT_LABELS[field]}
+            </option>
+          ))}
+        </select>
+        <select value={genreFilter} onChange={(event) => setGenreFilter(event.target.value)} aria-label="Filtrer par genre">
+          <option value="">Tous les genres</option>
+          {availableGenres.map((genre) => (
+            <option key={genre} value={genre}>
+              {genre}
+            </option>
+          ))}
+        </select>
+        <select value={studioFilter} onChange={(event) => setStudioFilter(event.target.value)} aria-label="Filtrer par studio">
+          <option value="">Tous les studios</option>
+          {availableStudios.map((studio) => (
+            <option key={studio} value={studio}>
+              {studio}
+            </option>
+          ))}
+        </select>
+        <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filtrer par tag">
+          <option value="">Tous les tags</option>
+          {availableTags.map((tag) => (
+            <option key={tag} value={tag}>
+              {tag}
             </option>
           ))}
         </select>

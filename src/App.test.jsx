@@ -19,6 +19,12 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'À propos' })).toBeInTheDocument();
   });
 
+  it('renders a link to the "Conseil moi" recommendation page, and shows the landing page by default', () => {
+    render(<App />);
+    expect(screen.getByRole('link', { name: 'Conseil moi' })).toHaveAttribute('href', '#/conseil-moi');
+    expect(screen.getByText('Bienvenue sur AniSensei')).toBeInTheDocument();
+  });
+
   it('renders a link to the Stats page', () => {
     render(<App />);
     expect(screen.getByRole('link', { name: 'Mes stats' })).toBeInTheDocument();

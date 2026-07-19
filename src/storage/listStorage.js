@@ -31,6 +31,7 @@ export function upsertAnime(entry) {
       coverImage: entry.coverImage ?? null,
       genres: entry.genres ?? [],
       studios: entry.studios ?? [],
+      tags: entry.tags ?? [],
       seasonYear: entry.seasonYear ?? null,
       status: entry.status ?? 'a_voir',
       note: entry.note ?? null,

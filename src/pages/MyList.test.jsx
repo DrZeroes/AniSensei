@@ -21,6 +21,7 @@ const entry = {
   comment: '',
   genres: ['Action'],
   studios: ['Toei Animation'],
+  tags: ['Pirates'],
   seasonYear: 1999,
   addedAt: 't',
 };
@@ -110,6 +111,54 @@ describe('MyList', () => {
     ]);
 
     renderMyList();
+
+    const titles = screen.getAllByRole('button', { name: /Zelda Anime|Attack on Titan|One Piece/ });
+    expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);
+  });
+
+  it('filters the visible list by genre, studio, and tag, offering only values present in the list', async () => {
+    getList.mockReturnValue([
+      entry, // genres: Action, studios: Toei Animation, tags: Pirates
+      {
+        ...entry,
+        animeId: 2,
+        title: 'Fate/stay night',
+        genres: ['Fantasy'],
+        studios: ['Ufotable'],
+        tags: ['Mahou Shoujo'],
+      },
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par genre'), 'Action');
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Filtrer par genre'), 'Tous les genres');
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par studio'), 'Ufotable');
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Filtrer par studio'), 'Tous les studios');
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par tag'), 'Pirates');
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
+  });
+
+  it('sorts by tag when that sort option is chosen', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 2, title: 'Zelda Anime', tags: ['Zealous'] },
+      { ...entry, animeId: 3, title: 'Attack on Titan', tags: ['Anguish'] },
+      entry, // tags: ['Pirates']
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.selectOptions(screen.getByLabelText('Trier par'), 'tags');
 
     const titles = screen.getAllByRole('button', { name: /Zelda Anime|Attack on Titan|One Piece/ });
     expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);

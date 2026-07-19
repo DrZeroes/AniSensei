@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, NavLink } from 'react-router-dom';
+import Landing from './pages/Landing.jsx';
 import Home from './pages/Home.jsx';
 import Catalogue from './pages/Catalogue.jsx';
 import MyList from './pages/MyList.jsx';
@@ -39,6 +40,7 @@ function App() {
           <NavLink to="/" end>
             Accueil
           </NavLink>
+          <NavLink to="/conseil-moi">Conseil moi</NavLink>
           <NavLink to="/catalogue">Catalogue</NavLink>
           <NavLink to="/ma-liste">Ma liste</NavLink>
           <NavLink to="/stats">Mes stats</NavLink>
@@ -55,7 +57,8 @@ function App() {
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/conseil-moi" element={<Home />} />
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/ma-liste" element={<MyList />} />
           <Route path="/anime/:id" element={<AnimeDetail />} />

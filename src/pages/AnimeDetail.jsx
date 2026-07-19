@@ -44,6 +44,7 @@ function AnimeDetail() {
       coverImage: anime.coverImage,
       genres: anime.genres,
       studios: anime.studios,
+      tags: anime.tags,
       seasonYear: anime.seasonYear,
       ...changes,
     });

@@ -101,6 +101,7 @@ function Catalogue() {
       coverImage: anime.coverImage,
       genres: anime.genres,
       studios: anime.studios,
+      tags: anime.tags,
       seasonYear: anime.seasonYear,
       status: 'vu',
     });
@@ -114,6 +115,7 @@ function Catalogue() {
       coverImage: anime.coverImage,
       genres: anime.genres,
       studios: anime.studios,
+      tags: anime.tags,
       seasonYear: anime.seasonYear,
       excluded: true,
     });

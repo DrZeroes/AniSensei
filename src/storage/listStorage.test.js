@@ -24,6 +24,7 @@ describe('listStorage', () => {
       title: 'One Piece',
       genres: ['Action'],
       studios: [],
+      tags: [],
       seasonYear: null,
       status: 'a_voir',
       note: null,
@@ -32,6 +33,12 @@ describe('listStorage', () => {
       comment: '',
     });
     expect(list[0].addedAt).toBeTruthy();
+  });
+
+  it('stores tags when provided', () => {
+    const list = upsertAnime({ animeId: 21, title: 'One Piece', tags: ['Pirates', 'Time Skip'] });
+
+    expect(list[0].tags).toEqual(['Pirates', 'Time Skip']);
   });
 
   it('merges fields into an existing entry on subsequent upsert', () => {

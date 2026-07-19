@@ -5,7 +5,12 @@ function badgeLabel(listEntry) {
   return 'À voir';
 }
 
-function AnimeCard({ anime, listEntry = null, score = null, reason = null, onAddSeen, onExclude, onClick }) {
+function metaLine(anime) {
+  const genreText = (anime.genres ?? []).length > 0 ? anime.genres.join(', ') : null;
+  return [anime.seasonYear, genreText].filter(Boolean).join(' · ');
+}
+
+function AnimeCard({ anime, listEntry = null, score = null, reason = null, scoreDetail = null, onAddSeen, onExclude, onClick }) {
   const badge = badgeLabel(listEntry);
 
   return (
@@ -15,13 +20,21 @@ function AnimeCard({ anime, listEntry = null, score = null, reason = null, onAdd
         <h3>{anime.title}</h3>
       </button>
       {badge && <span className="anime-card__badge">{badge}</span>}
-      {(score !== null || reason) && (
+      {score !== null && (
         <div className="anime-card__match">
-          {score !== null && <span className="anime-card__score">Score : {score.toFixed(1)}</span>}
-          {reason && <p className="anime-card__reason">{reason}</p>}
+          <span className="anime-card__score-wrap">
+            <button type="button" className="anime-card__score">
+              Score : {score.toFixed(1)}
+            </button>
+            <span className="anime-card__detail" role="tooltip">
+              {reason && <div>{reason}</div>}
+              {scoreDetail &&
+                scoreDetail.split('\n').map((line, index) => <div key={index}>{line}</div>)}
+            </span>
+          </span>
         </div>
       )}
-      <p>{(anime.genres ?? []).join(', ')}</p>
+      <p>{metaLine(anime)}</p>
       <div className="anime-card__actions">
         {onAddSeen && (
           <button type="button" onClick={() => onAddSeen(anime)}>

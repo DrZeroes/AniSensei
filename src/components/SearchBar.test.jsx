@@ -37,6 +37,19 @@ describe('SearchBar', () => {
     expect(onSelect).toHaveBeenCalledWith({ id: 1, title: 'One Piece' });
   });
 
+  it('clears the input and results after selecting an anime', async () => {
+    searchAnime.mockResolvedValue([{ id: 1, title: 'One Piece' }]);
+    const user = userEvent.setup();
+
+    render(<SearchBar onSelect={() => {}} />);
+    await user.type(screen.getByLabelText('Rechercher un anime'), 'One Piece');
+    await waitFor(() => screen.getByText('One Piece'));
+    await user.click(screen.getByRole('button', { name: 'One Piece' }));
+
+    expect(screen.getByLabelText('Rechercher un anime')).toHaveValue('');
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+  });
+
   it('shows an error message when the search fails', async () => {
     searchAnime.mockRejectedValue(new Error('network'));
     const user = userEvent.setup();

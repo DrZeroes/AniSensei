@@ -1,4 +1,4 @@
-const WEIGHTS = {
+export const WEIGHTS = {
   genre: 2,
   studio: 3,
   favoriteGenre: 1,

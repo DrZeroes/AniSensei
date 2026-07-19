@@ -1,5 +1,6 @@
 import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
 import { buildCandidatePool } from './buildPool.js';
+import { fetchDiscoveryPick } from './discovery.js';
 import { getList } from '../storage/listStorage.js';
 
 const MAX_FAVORITES_FOR_SCORING = 10;
@@ -27,6 +28,7 @@ export async function fetchRecommendationData(baseAnimeIds) {
   const favoritesList = await Promise.all(favoriteIds.map((id) => getAnimeDetails(id)));
 
   const pool = buildCandidatePool({ baseList, recommendationNodes, favoritesList, excludeIds });
+  const discoveryPick = await fetchDiscoveryPick(baseList, favoritesList, excludeIds);
 
-  return { pool, baseList };
+  return { pool, baseList, favoritesList, discoveryPick };
 }

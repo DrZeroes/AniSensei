@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchRecommendationData } from './fetchRecommendationData.js';
 import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
 import { getList } from '../storage/listStorage.js';
+import { fetchDiscoveryPick } from './discovery.js';
 
 vi.mock('../api/queries.js', () => ({
   getAnimeDetails: vi.fn(),
@@ -10,6 +11,10 @@ vi.mock('../api/queries.js', () => ({
 
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(),
+}));
+
+vi.mock('./discovery.js', () => ({
+  fetchDiscoveryPick: vi.fn(),
 }));
 
 const baseMedia = { id: 1, genres: ['Action'], studios: ['Ufotable'] };
@@ -21,6 +26,7 @@ describe('fetchRecommendationData', () => {
     getAnimeDetails.mockReset();
     getAnimeRecommendations.mockReset();
     getList.mockReset();
+    fetchDiscoveryPick.mockReset().mockResolvedValue(null);
   });
 
   it('throws base_vide when no base anime ids are given', async () => {
@@ -53,5 +59,16 @@ describe('fetchRecommendationData', () => {
     await fetchRecommendationData([1]);
 
     expect(getAnimeDetails).toHaveBeenCalledWith(5);
+  });
+
+  it('includes the discovery pick returned by fetchDiscoveryPick', async () => {
+    getAnimeDetails.mockResolvedValue(baseMedia);
+    getAnimeRecommendations.mockResolvedValue([]);
+    getList.mockReturnValue([]);
+    fetchDiscoveryPick.mockResolvedValue({ media: { id: 99, title: 'Obscure Anime' }, score: 3 });
+
+    const { discoveryPick } = await fetchRecommendationData([1]);
+
+    expect(discoveryPick).toEqual({ media: { id: 99, title: 'Obscure Anime' }, score: 3 });
   });
 });

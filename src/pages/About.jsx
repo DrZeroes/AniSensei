@@ -12,6 +12,29 @@ function About() {
         navigateur (localStorage) — aucune donnée n'est envoyée à un serveur. Tu peux
         l'exporter et la réimporter en JSON depuis "Ma liste".
       </p>
+      <h2>Comment le score est calculé</h2>
+      <p>
+        Chaque suggestion reçoit un score qui mesure ses points communs avec les animes que tu as
+        sélectionnés :
+      </p>
+      <ul>
+        <li>+2 points par genre partagé avec un anime de base (et par anime de base concerné)</li>
+        <li>+3 points par studio d'animation partagé avec un anime de base</li>
+        <li>
+          un bonus plus faible (+1 par genre, +1,5 par studio) si ça correspond aussi à tes
+          coups de cœur existants
+        </li>
+        <li>+ un petit bonus lié à la popularité de la suggestion parmi la communauté AniList</li>
+      </ul>
+      <p>
+        Le score ne détermine pas directement "le top 5" : parmi le pool de candidats
+        pertinents, 5 sont tirés au hasard mais <strong>pondérés</strong> par leur score — plus il
+        est élevé, plus la suggestion a de chances d'apparaître, mais ça garde de la variété d'une
+        fois à l'autre. La carte "Découverte" utilise le même calcul, mais pioche uniquement parmi
+        des animes peu populaires (en dehors du top ~500) du genre dominant de ta sélection, pour
+        toujours proposer une pépite plutôt qu'un classique déjà connu. Survole (ou touche sur
+        mobile) le score affiché sur une carte pour voir le détail du calcul.
+      </p>
       <p>
         Code source sur{' '}
         <a href="https://github.com/DrZeroes/AniSensei" target="_blank" rel="noreferrer">

@@ -4,76 +4,86 @@ import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
 import { fetchRecommendationData } from '../recommend/fetchRecommendationData.js';
 import { pickWeighted } from '../recommend/pickResults.js';
+import { explainMatch, buildScoreTooltip } from '../recommend/explain.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 
-function explainMatch(candidate, baseList) {
-  const genres = new Set();
-  const studios = new Set();
-
-  for (const base of baseList) {
-    for (const genre of candidate.genres ?? []) {
-      if ((base.genres ?? []).includes(genre)) genres.add(genre);
-    }
-    for (const studio of candidate.studios ?? []) {
-      if ((base.studios ?? []).includes(studio)) studios.add(studio);
-    }
-  }
-
-  const parts = [];
-  if (genres.size > 0) parts.push(`genres : ${[...genres].join(', ')}`);
-  if (studios.size > 0) parts.push(`studio : ${[...studios].join(', ')}`);
-
-  return parts.length > 0
-    ? `Points communs — ${parts.join(' · ')}`
-    : 'Recommandation basée sur la communauté AniList';
+function entryToMediaSummary(entry) {
+  return {
+    id: entry.animeId,
+    title: entry.title,
+    coverImage: entry.coverImage,
+    genres: entry.genres,
+    studios: entry.studios,
+    seasonYear: entry.seasonYear,
+  };
 }
 
 function Home() {
   const navigate = useNavigate();
   const [baseAnimes, setBaseAnimes] = useState([]);
   const [baseList, setBaseList] = useState([]);
+  const [favoritesList, setFavoritesList] = useState([]);
   const [pool, setPool] = useState([]);
   const [shownIds, setShownIds] = useState([]);
   const [results, setResults] = useState([]);
+  const [discoveryPick, setDiscoveryPick] = useState(null);
   const [status, setStatus] = useState('idle');
   const [lastBaseIds, setLastBaseIds] = useState([]);
+  const [markedEntries, setMarkedEntries] = useState({});
+
+  const localList = getList();
+  const favoriteEntries = localList.filter((entry) => entry.note === 'coup_de_coeur');
+  const seenEntries = localList.filter((entry) => entry.status === 'vu');
 
   function addBaseAnime(anime) {
     setBaseAnimes((prev) => (prev.some((a) => a.id === anime.id) ? prev : [...prev, anime]));
+  }
+
+  function removeBaseAnime(id) {
+    setBaseAnimes((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  function toggleChecklistAnime(entry) {
+    setBaseAnimes((prev) =>
+      prev.some((a) => a.id === entry.animeId)
+        ? prev.filter((a) => a.id !== entry.animeId)
+        : [...prev, entryToMediaSummary(entry)]
+    );
   }
 
   async function runRecommendation(baseAnimeIds) {
     setLastBaseIds(baseAnimeIds);
     setStatus('loading');
     try {
-      const { pool: newPool, baseList: newBaseList } = await fetchRecommendationData(baseAnimeIds);
+      const {
+        pool: newPool,
+        baseList: newBaseList,
+        favoritesList: newFavoritesList,
+        discoveryPick: newDiscoveryPick,
+      } = await fetchRecommendationData(baseAnimeIds);
       const { picked } = pickWeighted(newPool, 5);
       setPool(newPool);
       setBaseList(newBaseList);
+      setFavoritesList(newFavoritesList);
       setShownIds(picked.map((entry) => entry.media.id));
       setResults(picked);
+      setDiscoveryPick(newDiscoveryPick);
       setStatus('idle');
     } catch (error) {
       setStatus(error.message === 'base_vide' ? 'empty_base' : 'error');
     }
   }
 
-  function handleManualRecommend() {
+  function handleRecommend() {
     runRecommendation(baseAnimes.map((anime) => anime.id));
   }
 
-  function handleFromSeen() {
-    const ids = getList()
-      .filter((entry) => entry.status === 'vu')
-      .map((entry) => entry.animeId);
-    runRecommendation(ids);
-  }
-
-  function handleFromFavorites() {
-    const ids = getList()
-      .filter((entry) => entry.note === 'coup_de_coeur')
-      .map((entry) => entry.animeId);
-    runRecommendation(ids);
+  function handleReset() {
+    setPool([]);
+    setShownIds([]);
+    setResults([]);
+    setDiscoveryPick(null);
+    setStatus('idle');
   }
 
   function handleSeeMore() {
@@ -93,6 +103,7 @@ function Home() {
       seasonYear: anime.seasonYear,
       status: 'vu',
     });
+    setMarkedEntries((prev) => ({ ...prev, [anime.id]: { status: 'vu', excluded: false, note: null } }));
   }
 
   function handleExclude(anime) {
@@ -105,26 +116,99 @@ function Home() {
       seasonYear: anime.seasonYear,
       excluded: true,
     });
+    setMarkedEntries((prev) => ({
+      ...prev,
+      [anime.id]: { status: prev[anime.id]?.status ?? 'a_voir', excluded: true, note: null },
+    }));
   }
+
+  function renderCard(entry) {
+    return (
+      <AnimeCard
+        key={entry.media.id}
+        anime={entry.media}
+        listEntry={markedEntries[entry.media.id] ?? null}
+        score={entry.score}
+        reason={explainMatch(entry.media, baseList)}
+        scoreDetail={buildScoreTooltip(entry.media, baseList, favoritesList)}
+        onAddSeen={handleAddSeen}
+        onExclude={handleExclude}
+        onClick={(anime) => navigate(`/anime/${anime.id}`)}
+      />
+    );
+  }
+
+  const hasSomethingToReset = results.length > 0 || discoveryPick !== null || status !== 'idle';
 
   return (
     <section>
       <h2>Recommandation</h2>
-      <SearchBar onSelect={addBaseAnime} />
-      <ul>
-        {baseAnimes.map((anime) => (
-          <li key={anime.id}>{anime.title}</li>
-        ))}
-      </ul>
-      <button type="button" onClick={handleManualRecommend} disabled={baseAnimes.length === 0}>
-        Me conseiller un anime
-      </button>
-      <button type="button" onClick={handleFromSeen}>
-        Selon mes vus
-      </button>
-      <button type="button" onClick={handleFromFavorites}>
-        Selon mes coups de cœur
-      </button>
+
+      <div className="base-picker">
+        <SearchBar onSelect={addBaseAnime} />
+
+        {baseAnimes.length > 0 && (
+          <ul className="base-picker__selected">
+            {baseAnimes.map((anime) => (
+              <li key={anime.id}>
+                {anime.title}
+                <button
+                  type="button"
+                  onClick={() => removeBaseAnime(anime.id)}
+                  aria-label={`Retirer ${anime.title}`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="base-picker__checklists">
+          <fieldset className="checklist">
+            <legend>Mes coups de cœur</legend>
+            {favoriteEntries.length === 0 && (
+              <p className="checklist__empty">Aucun anime marqué coup de cœur.</p>
+            )}
+            {favoriteEntries.map((entry) => (
+              <label key={entry.animeId} className="checklist__item">
+                <input
+                  type="checkbox"
+                  checked={baseAnimes.some((a) => a.id === entry.animeId)}
+                  onChange={() => toggleChecklistAnime(entry)}
+                />
+                {entry.title}
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="checklist">
+            <legend>Mes animes vus</legend>
+            {seenEntries.length === 0 && <p className="checklist__empty">Aucun anime marqué vu.</p>}
+            {seenEntries.map((entry) => (
+              <label key={entry.animeId} className="checklist__item">
+                <input
+                  type="checkbox"
+                  checked={baseAnimes.some((a) => a.id === entry.animeId)}
+                  onChange={() => toggleChecklistAnime(entry)}
+                />
+                {entry.title}
+              </label>
+            ))}
+          </fieldset>
+        </div>
+
+        <div className="base-picker__actions">
+          <button type="button" className="primary" onClick={handleRecommend} disabled={baseAnimes.length === 0}>
+            Me conseiller un anime
+          </button>
+          {hasSomethingToReset && (
+            <button type="button" onClick={handleReset}>
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
 
       {status === 'loading' && <p>Recherche de suggestions...</p>}
       {status === 'empty_base' && <p>Ajoute d'abord des animes à ta liste pour ce mode.</p>}
@@ -137,19 +221,14 @@ function Home() {
         </p>
       )}
 
-      <div className="results-grid">
-        {results.map((entry) => (
-          <AnimeCard
-            key={entry.media.id}
-            anime={entry.media}
-            score={entry.score}
-            reason={explainMatch(entry.media, baseList)}
-            onAddSeen={handleAddSeen}
-            onExclude={handleExclude}
-            onClick={(anime) => navigate(`/anime/${anime.id}`)}
-          />
-        ))}
-      </div>
+      <div className="results-grid">{results.map(renderCard)}</div>
+
+      {discoveryPick && (
+        <div className="discovery-pick">
+          <h3>Découverte</h3>
+          {renderCard(discoveryPick)}
+        </div>
+      )}
 
       {results.length > 0 && status !== 'exhausted' && (
         <button type="button" onClick={handleSeeMore}>

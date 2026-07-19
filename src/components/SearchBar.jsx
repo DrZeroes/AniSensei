@@ -35,6 +35,11 @@ function SearchBar({ onSelect }) {
     };
   }, [term]);
 
+  function handleSelect(anime) {
+    onSelect(anime);
+    setTerm('');
+  }
+
   return (
     <div className="search-bar">
       <input
@@ -51,7 +56,7 @@ function SearchBar({ onSelect }) {
       <ul>
         {results.map((anime) => (
           <li key={anime.id}>
-            <button type="button" onClick={() => onSelect(anime)}>
+            <button type="button" onClick={() => handleSelect(anime)}>
               {anime.title}
             </button>
           </li>

@@ -38,14 +38,27 @@ describe('AnimeCard', () => {
     expect(onExclude).toHaveBeenCalledWith(anime);
   });
 
-  it('shows the score and reason when provided', () => {
-    render(<AnimeCard anime={anime} score={7.5} reason="Points communs — genres : Action" />);
-    expect(screen.getByText('Score : 7.5')).toBeInTheDocument();
+  it('shows the score button with the reason and detail available on hover/focus', () => {
+    render(
+      <AnimeCard
+        anime={anime}
+        score={7.5}
+        reason="Points communs — genres : Action"
+        scoreDetail={'Animes de base — genre "Action" x1 : +2'}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Score : 7.5' })).toBeInTheDocument();
     expect(screen.getByText('Points communs — genres : Action')).toBeInTheDocument();
+    expect(screen.getByText('Animes de base — genre "Action" x1 : +2')).toBeInTheDocument();
   });
 
-  it('does not show score or reason when not provided', () => {
+  it('does not show a score button when score is not provided', () => {
     render(<AnimeCard anime={anime} />);
     expect(screen.queryByText(/Score :/)).not.toBeInTheDocument();
+  });
+
+  it('shows the release year alongside the genres', () => {
+    render(<AnimeCard anime={{ ...anime, seasonYear: 1999 }} />);
+    expect(screen.getByText('1999 · Action, Adventure')).toBeInTheDocument();
   });
 });

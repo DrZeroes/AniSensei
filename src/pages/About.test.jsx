@@ -9,4 +9,11 @@ describe('About', () => {
     expect(screen.getByText("À propos d'AniSensei")).toBeInTheDocument();
     expect(screen.getByText(/n'est ni affilié ni approuvé par AniList/)).toBeInTheDocument();
   });
+
+  it('explains how the recommendation score is calculated', () => {
+    render(<About />);
+
+    expect(screen.getByText('Comment le score est calculé')).toBeInTheDocument();
+    expect(screen.getByText(/\+2 points par genre partagé/)).toBeInTheDocument();
+  });
 });

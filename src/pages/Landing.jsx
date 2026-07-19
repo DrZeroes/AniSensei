@@ -16,7 +16,7 @@ const SECTIONS = [
     to: '/ma-liste',
     title: 'Ma liste',
     description:
-      'Gère ta liste personnelle : statut (vu / à voir), note, commentaire, triable et filtrable par genre, tag ou studio.',
+      'Gère ta liste personnelle : statut (vu / à voir), note, commentaire, triable et filtrable par genre, tag ou studio. Exportable en fichier, et réimportable ailleurs (ou en cas de changement d\'appareil).',
   },
   {
     to: '/stats',

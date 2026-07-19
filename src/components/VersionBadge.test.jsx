@@ -37,4 +37,31 @@ describe('VersionBadge', () => {
 
     expect(screen.queryByText(/Add version badge and changelog/)).not.toBeInTheDocument();
   });
+
+  it('closes the changelog when clicking outside of it', async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <VersionBadge />
+        <button type="button">Elsewhere</button>
+      </div>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'dev' }));
+    expect(screen.getByText(/Add version badge and changelog/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
+
+    expect(screen.queryByText(/Add version badge and changelog/)).not.toBeInTheDocument();
+  });
+
+  it('does not close when clicking inside the open changelog', async () => {
+    const user = userEvent.setup();
+    render(<VersionBadge />);
+
+    await user.click(screen.getByRole('button', { name: 'dev' }));
+    await user.click(screen.getByRole('dialog'));
+
+    expect(screen.getByText(/Add version badge and changelog/)).toBeInTheDocument();
+  });
 });

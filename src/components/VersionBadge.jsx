@@ -1,13 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import changelog from '../generated/changelog.json';
 
 const VERSION = import.meta.env.VITE_APP_VERSION || 'dev';
 
 function VersionBadge() {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event) {
+      if (!containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [open]);
 
   return (
-    <div className="version-badge">
+    <div className="version-badge" ref={containerRef}>
       <button
         type="button"
         className="version-badge__toggle"

@@ -18,12 +18,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10 # need at least the last 5 commits for the in-app changelog
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          VITE_APP_VERSION: v${{ github.run_number }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

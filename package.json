@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "generate:changelog": "node scripts/generate-changelog.mjs",
+    "dev": "npm run generate:changelog && vite",
+    "build": "npm run generate:changelog && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "npm run generate:changelog && vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",

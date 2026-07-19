@@ -5,6 +5,7 @@ import Catalogue from './pages/Catalogue.jsx';
 import MyList from './pages/MyList.jsx';
 import AnimeDetail from './pages/AnimeDetail.jsx';
 import About from './pages/About.jsx';
+import VersionBadge from './components/VersionBadge.jsx';
 
 const THEME_KEY = 'aniSensei.theme';
 
@@ -59,6 +60,9 @@ function App() {
           <Route path="/apropos" element={<About />} />
         </Routes>
       </main>
+      <footer className="app-footer">
+        <VersionBadge />
+      </footer>
     </HashRouter>
   );
 }

@@ -6,9 +6,32 @@ import { fetchRecommendationData } from '../recommend/fetchRecommendationData.js
 import { pickWeighted } from '../recommend/pickResults.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 
+function explainMatch(candidate, baseList) {
+  const genres = new Set();
+  const studios = new Set();
+
+  for (const base of baseList) {
+    for (const genre of candidate.genres ?? []) {
+      if ((base.genres ?? []).includes(genre)) genres.add(genre);
+    }
+    for (const studio of candidate.studios ?? []) {
+      if ((base.studios ?? []).includes(studio)) studios.add(studio);
+    }
+  }
+
+  const parts = [];
+  if (genres.size > 0) parts.push(`genres : ${[...genres].join(', ')}`);
+  if (studios.size > 0) parts.push(`studio : ${[...studios].join(', ')}`);
+
+  return parts.length > 0
+    ? `Points communs — ${parts.join(' · ')}`
+    : 'Recommandation basée sur la communauté AniList';
+}
+
 function Home() {
   const navigate = useNavigate();
   const [baseAnimes, setBaseAnimes] = useState([]);
+  const [baseList, setBaseList] = useState([]);
   const [pool, setPool] = useState([]);
   const [shownIds, setShownIds] = useState([]);
   const [results, setResults] = useState([]);
@@ -23,9 +46,10 @@ function Home() {
     setLastBaseIds(baseAnimeIds);
     setStatus('loading');
     try {
-      const { pool: newPool } = await fetchRecommendationData(baseAnimeIds);
+      const { pool: newPool, baseList: newBaseList } = await fetchRecommendationData(baseAnimeIds);
       const { picked } = pickWeighted(newPool, 5);
       setPool(newPool);
+      setBaseList(newBaseList);
       setShownIds(picked.map((entry) => entry.media.id));
       setResults(picked);
       setStatus('idle');
@@ -118,6 +142,8 @@ function Home() {
           <AnimeCard
             key={entry.media.id}
             anime={entry.media}
+            score={entry.score}
+            reason={explainMatch(entry.media, baseList)}
             onAddSeen={handleAddSeen}
             onExclude={handleExclude}
             onClick={(anime) => navigate(`/anime/${anime.id}`)}

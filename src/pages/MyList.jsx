@@ -13,24 +13,36 @@ const STATUS_OPTIONS = ['a_voir', 'vu'];
 const NOTE_OPTIONS = ['coup_de_coeur', 'aime', 'pas_aime'];
 const SORT_FIELDS = ['note', 'seasonYear', 'genres', 'studios'];
 
+const STATUS_LABELS = { a_voir: 'À voir', vu: 'Vu ✓' };
+const NOTE_LABELS = {
+  '': 'Pas de note',
+  coup_de_coeur: '❤️ Coup de cœur',
+  aime: '👍 Aimé',
+  pas_aime: '👎 Pas aimé',
+};
+
+const TABS = [
+  { id: 'vus', label: 'Mes animes vus' },
+  { id: 'exclus', label: 'Animes à ne plus me recommander' },
+];
+
 function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
-  const [statusFilter, setStatusFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('vus');
   const [sortField, setSortField] = useState('addedAt');
   const [pendingImport, setPendingImport] = useState(null);
 
   const visibleList = useMemo(() => {
-    let items = list;
-    if (statusFilter) {
-      items = items.filter((entry) => entry.status === statusFilter);
-    }
+    const items = list.filter((entry) =>
+      activeTab === 'exclus' ? entry.excluded : entry.status === 'vu'
+    );
     return [...items].sort((a, b) => {
       const aValue = Array.isArray(a[sortField]) ? a[sortField][0] ?? '' : a[sortField] ?? '';
       const bValue = Array.isArray(b[sortField]) ? b[sortField][0] ?? '' : b[sortField] ?? '';
       return String(aValue).localeCompare(String(bValue));
     });
-  }, [list, statusFilter, sortField]);
+  }, [list, activeTab, sortField]);
 
   function updateEntry(animeId, changes) {
     const updated = upsertAnime({ animeId, ...changes });
@@ -82,19 +94,23 @@ function MyList() {
   return (
     <section>
       <h2>Ma liste</h2>
+
+      <div className="tabs" role="tablist">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={activeTab === tab.id ? 'tab tab--active' : 'tab'}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="my-list-controls">
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          aria-label="Filtrer par statut"
-        >
-          <option value="">Tous les statuts</option>
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
         <select value={sortField} onChange={(event) => setSortField(event.target.value)} aria-label="Trier par">
           <option value="addedAt">Date d'ajout</option>
           {SORT_FIELDS.map((field) => (
@@ -112,44 +128,58 @@ function MyList() {
         </label>
       </div>
 
-      <ul>
+      <ul className="my-list">
         {visibleList.map((entry) => (
-          <li key={entry.animeId}>
-            <button type="button" onClick={() => navigate(`/anime/${entry.animeId}`)}>
+          <li key={entry.animeId} className="my-list-item">
+            {entry.coverImage && <img src={entry.coverImage} alt="" className="my-list-item__cover" />}
+            <button
+              type="button"
+              className="my-list-item__title"
+              onClick={() => navigate(`/anime/${entry.animeId}`)}
+            >
               {entry.title}
             </button>
-            <select
-              value={entry.status}
-              aria-label={`Statut de ${entry.title}`}
-              onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <select
-              value={entry.note ?? ''}
-              aria-label={`Note de ${entry.title}`}
-              onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
-            >
-              <option value="">Pas de note</option>
-              {NOTE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={entry.comment}
-              aria-label={`Commentaire pour ${entry.title}`}
-              onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
-            />
-            <button type="button" onClick={() => handleRemove(entry.animeId)}>
-              Supprimer
-            </button>
+            <div className="my-list-item__fields">
+              <select
+                className={`status-select status-select--${entry.status}`}
+                value={entry.status}
+                aria-label={`Statut de ${entry.title}`}
+                onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {STATUS_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+              <select
+                className={`note-select note-select--${entry.note ?? 'none'}`}
+                value={entry.note ?? ''}
+                aria-label={`Note de ${entry.title}`}
+                onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
+              >
+                <option value="">{NOTE_LABELS['']}</option>
+                {NOTE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {NOTE_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={entry.comment}
+                aria-label={`Commentaire pour ${entry.title}`}
+                onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
+              />
+              {entry.excluded && (
+                <button type="button" onClick={() => updateEntry(entry.animeId, { excluded: false })}>
+                  Retirer de la liste des exclus
+                </button>
+              )}
+              <button type="button" onClick={() => handleRemove(entry.animeId)}>
+                Supprimer
+              </button>
+            </div>
           </li>
         ))}
       </ul>

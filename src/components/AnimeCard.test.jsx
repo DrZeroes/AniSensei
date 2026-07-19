@@ -37,4 +37,15 @@ describe('AnimeCard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ne plus recommander' }));
     expect(onExclude).toHaveBeenCalledWith(anime);
   });
+
+  it('shows the score and reason when provided', () => {
+    render(<AnimeCard anime={anime} score={7.5} reason="Points communs — genres : Action" />);
+    expect(screen.getByText('Score : 7.5')).toBeInTheDocument();
+    expect(screen.getByText('Points communs — genres : Action')).toBeInTheDocument();
+  });
+
+  it('does not show score or reason when not provided', () => {
+    render(<AnimeCard anime={anime} />);
+    expect(screen.queryByText(/Score :/)).not.toBeInTheDocument();
+  });
 });

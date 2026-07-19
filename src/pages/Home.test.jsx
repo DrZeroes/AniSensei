@@ -65,6 +65,21 @@ describe('Home', () => {
     await waitFor(() => expect(screen.getByText('Tsukihime')).toBeInTheDocument());
   });
 
+  it('shows the score and a genre-based reason for each result', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: { ...candidate, genres: ['Action'] }, score: 7.5 }],
+      baseList: [{ id: 1, genres: ['Action'], studios: [] }],
+    });
+    getList.mockReturnValue([{ animeId: 1, status: 'vu' }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await user.click(screen.getByRole('button', { name: 'Selon mes vus' }));
+
+    await waitFor(() => expect(screen.getByText('Score : 7.5')).toBeInTheDocument());
+    expect(screen.getByText('Points communs — genres : Action')).toBeInTheDocument();
+  });
+
   it('marks a result as seen via the quick action', async () => {
     fetchRecommendationData.mockResolvedValue({ pool: [{ media: candidate, score: 10 }], baseList: [] });
     getList.mockReturnValue([{ animeId: 1, status: 'vu' }]);

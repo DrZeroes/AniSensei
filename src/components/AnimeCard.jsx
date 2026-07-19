@@ -5,7 +5,7 @@ function badgeLabel(listEntry) {
   return 'À voir';
 }
 
-function AnimeCard({ anime, listEntry = null, onAddSeen, onExclude, onClick }) {
+function AnimeCard({ anime, listEntry = null, score = null, reason = null, onAddSeen, onExclude, onClick }) {
   const badge = badgeLabel(listEntry);
 
   return (
@@ -15,6 +15,12 @@ function AnimeCard({ anime, listEntry = null, onAddSeen, onExclude, onClick }) {
         <h3>{anime.title}</h3>
       </button>
       {badge && <span className="anime-card__badge">{badge}</span>}
+      {(score !== null || reason) && (
+        <div className="anime-card__match">
+          {score !== null && <span className="anime-card__score">Score : {score.toFixed(1)}</span>}
+          {reason && <p className="anime-card__reason">{reason}</p>}
+        </div>
+      )}
       <p>{(anime.genres ?? []).join(', ')}</p>
       <div className="anime-card__actions">
         {onAddSeen && (

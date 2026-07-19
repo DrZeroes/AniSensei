@@ -11,9 +11,30 @@ const SORT_OPTIONS = [
   { value: 'TITLE_ROMAJI', label: 'Titre' },
 ];
 
+const GENRES = [
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Drama',
+  'Ecchi',
+  'Fantasy',
+  'Horror',
+  'Mahou Shoujo',
+  'Mecha',
+  'Music',
+  'Mystery',
+  'Psychological',
+  'Romance',
+  'Sci-Fi',
+  'Slice of Life',
+  'Sports',
+  'Supernatural',
+  'Thriller',
+];
+
 function Catalogue() {
   const navigate = useNavigate();
-  const [genre, setGenre] = useState('');
+  const [genres, setGenres] = useState([]);
   const [year, setYear] = useState('');
   const [sort, setSort] = useState('POPULARITY_DESC');
   const [page, setPage] = useState(1);
@@ -28,7 +49,7 @@ function Catalogue() {
     try {
       const result = await browseCatalogue({
         page: targetPage,
-        genre: genre || null,
+        genres,
         year: year ? Number(year) : null,
         sort: [sort],
       });
@@ -46,7 +67,11 @@ function Catalogue() {
     setPage(1);
     loadPage(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [genre, year, sort]);
+  }, [genres, year, sort]);
+
+  function toggleGenre(genre) {
+    setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]));
+  }
 
   function handleLoadMore() {
     if (status === 'loading') return;
@@ -64,13 +89,21 @@ function Catalogue() {
     <section>
       <h2>Catalogue</h2>
       <div className="catalogue-filters">
-        <input
-          type="text"
-          placeholder="Genre (ex: Action)"
-          value={genre}
-          onChange={(event) => setGenre(event.target.value)}
-          aria-label="Filtrer par genre"
-        />
+        <fieldset className="genre-filter">
+          <legend>Genres</legend>
+          <div className="genre-filter__options">
+            {GENRES.map((genre) => (
+              <label key={genre} className="genre-chip">
+                <input
+                  type="checkbox"
+                  checked={genres.includes(genre)}
+                  onChange={() => toggleGenre(genre)}
+                />
+                {genre}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <input
           type="number"
           placeholder="Année"

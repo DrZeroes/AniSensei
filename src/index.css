@@ -220,6 +220,52 @@ button:focus-visible {
   background: var(--bg-elevated-2);
 }
 
+/* Genre filter */
+
+.genre-filter {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem 0.75rem;
+  min-width: 100%;
+}
+
+.genre-filter legend {
+  padding: 0 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.genre-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.genre-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated-2);
+  font-size: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.genre-chip:has(input:checked) {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.genre-chip input {
+  accent-color: var(--accent-2);
+}
+
 /* Card grids */
 
 .results-grid,

@@ -119,7 +119,7 @@ describe('browseCatalogue', () => {
       Page: { pageInfo: { hasNextPage: true }, media: [sampleMedia] },
     });
 
-    const result = await browseCatalogue({ page: 2, genre: 'Action' });
+    const result = await browseCatalogue({ page: 2, genres: ['Action'] });
 
     expect(anilistQuery).toHaveBeenCalledWith(
       expect.any(String),
@@ -127,6 +127,29 @@ describe('browseCatalogue', () => {
     );
     expect(result.hasNextPage).toBe(true);
     expect(result.media).toHaveLength(1);
+  });
+
+  it('sends multiple genres as a single genre_in filter', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ genres: ['Action', 'Comedy'] });
+
+    expect(anilistQuery).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ genres: ['Action', 'Comedy'] })
+    );
+  });
+
+  it('sends no genre filter when the genres list is empty', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ genres: [] });
+
+    expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ genres: null }));
   });
 
   it('filters by studio client-side when provided', async () => {

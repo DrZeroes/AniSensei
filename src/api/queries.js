@@ -145,7 +145,7 @@ const CATALOGUE_QUERY = `
 export async function browseCatalogue({
   page = 1,
   perPage = 20,
-  genre = null,
+  genres = [],
   year = null,
   format = null,
   studio = null,
@@ -154,7 +154,7 @@ export async function browseCatalogue({
   const data = await anilistQuery(CATALOGUE_QUERY, {
     page,
     perPage,
-    genres: genre ? [genre] : null,
+    genres: genres.length > 0 ? genres : null,
     year,
     format,
     sort,

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 function badgeLabel(listEntry) {
   if (!listEntry) return null;
   if (listEntry.excluded) return 'Exclu';
@@ -11,11 +13,43 @@ function metaLine(anime) {
   return [yearText, genreText].filter(Boolean).join(' · ');
 }
 
-function AnimeCard({ anime, listEntry = null, score = null, reason = null, scoreDetail = null, onAddSeen, onExclude, onClick }) {
+function AnimeCard({
+  anime,
+  listEntry = null,
+  score = null,
+  reason = null,
+  scoreDetail = null,
+  bonus = false,
+  bonusReason = null,
+  gacha = false,
+  onAddSeen,
+  onExclude,
+  onClick,
+}) {
+  const [revealed, setRevealed] = useState(!gacha);
   const badge = badgeLabel(listEntry);
+  const cardClassName = ['anime-card', bonus && 'anime-card--bonus', gacha && revealed && 'anime-card--revealed']
+    .filter(Boolean)
+    .join(' ');
+
+  if (gacha && !revealed) {
+    return (
+      <article className={cardClassName + ' anime-card--hidden'}>
+        <button
+          type="button"
+          className="anime-card__reveal"
+          onClick={() => setRevealed(true)}
+          aria-label={`Révéler ${anime.title}`}
+        >
+          <span className="anime-card__reveal-icon" aria-hidden="true">?</span>
+          <span>Cliquer pour révéler</span>
+        </button>
+      </article>
+    );
+  }
 
   return (
-    <article className="anime-card">
+    <article className={cardClassName}>
       <button type="button" className="anime-card__cover" onClick={() => onClick?.(anime)}>
         {anime.coverImage && <img src={anime.coverImage} alt={anime.title} />}
         <h3>{anime.title}</h3>
@@ -38,6 +72,18 @@ function AnimeCard({ anime, listEntry = null, score = null, reason = null, score
               )}
             </span>
           </span>
+          {bonus && (
+            <span className="anime-card__score-wrap">
+              <button type="button" className="anime-card__score anime-card__bonus-tag">
+                Bonus
+              </button>
+              <span className="anime-card__detail" role="tooltip">
+                <p className="anime-card__detail-reason">
+                  {bonusReason ?? 'Sélectionné pour te faire découvrir une pépite peu connue.'}
+                </p>
+              </span>
+            </span>
+          )}
         </div>
       )}
       <p>{metaLine(anime)}</p>

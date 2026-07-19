@@ -18,8 +18,15 @@ export function pickWeighted(pool, count, excludeIds = [], rng = Math.random) {
   const excluded = new Set(excludeIds);
   const available = pool.filter((entry) => !excluded.has(entry.media.id));
 
-  const picked = [];
-  const remaining = [...available];
+  // Franchise entries (prequels/sequels/side stories) are flagged "guaranteed" by
+  // buildCandidatePool — a weighted draw alone can leave one buried behind more
+  // generally-recommended anime, so they're seated first (highest score wins if
+  // there are more of them than room), then the rest of the count is drawn as usual.
+  const guaranteed = available.filter((entry) => entry.guaranteed).sort((a, b) => b.score - a.score);
+  const rest = available.filter((entry) => !entry.guaranteed);
+
+  const picked = guaranteed.slice(0, count);
+  const remaining = [...rest];
 
   while (picked.length < count && remaining.length > 0) {
     const index = pickOne(remaining, rng);

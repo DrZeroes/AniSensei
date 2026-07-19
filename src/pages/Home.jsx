@@ -4,10 +4,18 @@ import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
 import ChecklistSection from '../components/ChecklistSection.jsx';
 import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '../recommend/fetchRecommendationData.js';
-import { fetchDiscoveryPick } from '../recommend/discovery.js';
+import { fetchDiscoveryPick, pickDominantGenre } from '../recommend/discovery.js';
 import { pickWeighted } from '../recommend/pickResults.js';
 import { explainMatch, buildScoreTooltip } from '../recommend/explain.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
+import { getGachaMode, setGachaMode } from '../storage/settings.js';
+
+function bonusReasonFor(baseList) {
+  const genre = pickDominantGenre(baseList);
+  return genre
+    ? `Pépite peu connue du genre "${genre}", en dehors du top des plus populaires — pour sortir des sentiers battus.`
+    : 'Pépite peu connue, en dehors du top des plus populaires — pour sortir des sentiers battus.';
+}
 
 // Safety net so a "Voir d'autres" click can't loop through an unbounded number
 // of AniList pages if the genre's catalogue is nearly exhausted of unseen anime.
@@ -50,6 +58,15 @@ function Home() {
   const [markedEntries, setMarkedEntries] = useState({});
   const [favoritesExpanded, setFavoritesExpanded] = useState(false);
   const [seenExpanded, setSeenExpanded] = useState(false);
+  const [gachaMode, setGachaModeState] = useState(() => getGachaMode());
+
+  function toggleGachaMode() {
+    setGachaModeState((prev) => {
+      const next = !prev;
+      setGachaMode(next);
+      return next;
+    });
+  }
 
   const localList = getList();
   const byTitle = (a, b) => a.title.localeCompare(b.title);
@@ -192,7 +209,7 @@ function Home() {
     }));
   }
 
-  function renderCard(entry) {
+  function renderCard(entry, { bonus = false } = {}) {
     return (
       <AnimeCard
         key={entry.media.id}
@@ -201,6 +218,9 @@ function Home() {
         score={entry.score}
         reason={explainMatch(entry.media, baseList)}
         scoreDetail={buildScoreTooltip(entry.media, baseList, favoritesList)}
+        bonus={bonus}
+        bonusReason={bonus ? bonusReasonFor(baseList) : null}
+        gacha={gachaMode}
         onAddSeen={handleAddSeen}
         onExclude={handleExclude}
         onClick={(anime) => navigate(`/anime/${anime.id}`)}
@@ -262,6 +282,10 @@ function Home() {
               Réinitialiser
             </button>
           )}
+          <label className="gacha-toggle">
+            <input type="checkbox" checked={gachaMode} onChange={toggleGachaMode} />
+            Mode gacha
+          </label>
         </div>
       </div>
 
@@ -276,14 +300,10 @@ function Home() {
         </p>
       )}
 
-      <div className="results-grid">{results.map(renderCard)}</div>
-
-      {discoveryPick && (
-        <div className="discovery-pick">
-          <h3>Découverte</h3>
-          {renderCard(discoveryPick)}
-        </div>
-      )}
+      <div className="results-grid">
+        {results.map((entry) => renderCard(entry))}
+        {discoveryPick && renderCard(discoveryPick, { bonus: true })}
+      </div>
 
       {results.length > 0 && status !== 'exhausted' && (
         <button type="button" onClick={handleSeeMore} disabled={loadingMore}>

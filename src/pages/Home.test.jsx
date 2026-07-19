@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Home from './Home.jsx';
 import { fetchRecommendationData, fetchMoreCandidates, getExcludedIds } from '../recommend/fetchRecommendationData.js';
-import { fetchDiscoveryPick } from '../recommend/discovery.js';
+import { fetchDiscoveryPick, pickDominantGenre } from '../recommend/discovery.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 import { searchAnime } from '../api/queries.js';
 
@@ -15,6 +15,7 @@ vi.mock('../recommend/fetchRecommendationData.js', () => ({
 }));
 vi.mock('../recommend/discovery.js', () => ({
   fetchDiscoveryPick: vi.fn(),
+  pickDominantGenre: vi.fn(),
 }));
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(() => []),
@@ -45,9 +46,11 @@ describe('Home', () => {
     fetchMoreCandidates.mockReset().mockResolvedValue({ candidates: [], genre: null });
     getExcludedIds.mockReset().mockReturnValue([]);
     fetchDiscoveryPick.mockReset().mockResolvedValue(null);
+    pickDominantGenre.mockReset().mockReturnValue(null);
     getList.mockReset().mockReturnValue([]);
     upsertAnime.mockReset();
     searchAnime.mockReset();
+    localStorage.clear(); // gacha mode preference is real localStorage, unlike the mocked stores above
   });
 
   it('disables "Me conseiller un anime" until an anime is selected', async () => {
@@ -240,7 +243,7 @@ describe('Home', () => {
     expect(fetchRecommendationData).toHaveBeenCalledTimes(2);
   });
 
-  it('shows a bonus Découverte suggestion alongside the main results', async () => {
+  it('shows a bonus Découverte suggestion alongside the main results, tagged as bonus', async () => {
     fetchRecommendationData.mockResolvedValue({
       pool: [{ media: candidate, score: 10 }],
       baseList: [],
@@ -254,8 +257,10 @@ describe('Home', () => {
     await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
 
-    await waitFor(() => expect(screen.getByText('Découverte')).toBeInTheDocument());
-    expect(screen.getByText('Obscure Gem')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Obscure Gem')).toBeInTheDocument());
+    expect(screen.getByText('Bonus')).toBeInTheDocument();
+    // Rendered inline in the same results grid as the other suggestions, not a separate section.
+    expect(screen.getByText('Obscure Gem').closest('.results-grid')).not.toBeNull();
   });
 
   it('keeps existing results visible when "Voir d\'autres" finds nothing new anywhere', async () => {
@@ -376,5 +381,31 @@ describe('Home', () => {
 
     expect(screen.queryByText('Tsukihime')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Réinitialiser' })).not.toBeInTheDocument();
+  });
+
+  it('hides results behind a reveal button once "Mode gacha" is enabled, and persists the choice', async () => {
+    fetchRecommendationData.mockResolvedValue({
+      pool: [{ media: candidate, score: 10 }],
+      baseList: [],
+      favoritesList: [],
+      discoveryPick: null,
+    });
+    getList.mockReturnValue([{ animeId: 1, title: 'Base Anime', status: 'vu', note: null, excluded: false }]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await user.click(screen.getByRole('checkbox', { name: 'Mode gacha' }));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
+    await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Révéler Tsukihime' })).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Tsukihime')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Révéler Tsukihime' }));
+    expect(screen.getByText('Tsukihime')).toBeInTheDocument();
+
+    expect(localStorage.getItem('aniSensei.settings')).toContain('"gachaMode":true');
   });
 });

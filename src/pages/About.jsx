@@ -34,11 +34,17 @@ function About() {
         détail du calcul.
       </p>
       <p>
-        En plus de ces 5 suggestions, une <strong>6ᵉ carte "Découverte"</strong> apparaît toujours à
-        part : elle utilise le même calcul de score, mais pioche uniquement parmi des animes peu
-        populaires (en dehors du top ~500) du genre dominant de ta sélection, pour toujours
-        proposer une pépite plutôt qu'un classique déjà connu. Chaque clic sur "Voir d'autres" tire
-        aussi une nouvelle carte "Découverte", en plus des 5 nouvelles suggestions.
+        En plus de ces 5 suggestions, une <strong>6ᵉ carte "Découverte"</strong> apparaît toujours au
+        milieu des autres, reconnaissable à son tag <strong>Bonus</strong> à côté du score (survole-le
+        pour voir pourquoi elle a été choisie). Elle utilise le même calcul de score, mais pioche
+        uniquement parmi des animes peu populaires (en dehors du top ~500) du genre dominant de ta
+        sélection, pour toujours proposer une pépite plutôt qu'un classique déjà connu. Chaque clic
+        sur "Voir d'autres" tire aussi une nouvelle carte "Découverte", en plus des 5 nouvelles
+        suggestions.
+      </p>
+      <p>
+        Le <strong>mode gacha</strong> (case à cocher au-dessus des résultats) affiche les
+        suggestions face cachée : clique sur chacune pour la révéler une par une, comme un tirage.
       </p>
       <p>
         Code source sur{' '}

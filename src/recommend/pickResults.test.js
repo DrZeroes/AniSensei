@@ -30,4 +30,30 @@ describe('pickWeighted', () => {
     const ids = picked.map((entry) => entry.media.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('always includes a guaranteed entry even when it would lose the weighted draw', () => {
+    // rng() => 0.999 always steers pickOne toward the last (lowest-weight) entry,
+    // so without the guarantee the low-score franchise relation would rarely be picked.
+    const poolWithRelation = [
+      { media: { id: 1 }, score: 50 },
+      { media: { id: 2 }, score: 30 },
+      { media: { id: 3 }, score: 0.1, guaranteed: true },
+    ];
+
+    const { picked } = pickWeighted(poolWithRelation, 2, [], () => 0.999);
+
+    expect(picked.map((entry) => entry.media.id)).toContain(3);
+  });
+
+  it('seats multiple guaranteed entries, highest score first, before filling the rest by weight', () => {
+    const poolWithRelations = [
+      { media: { id: 1 }, score: 50 },
+      { media: { id: 2 }, score: 5, guaranteed: true },
+      { media: { id: 3 }, score: 9, guaranteed: true },
+    ];
+
+    const { picked } = pickWeighted(poolWithRelations, 2, [], () => 0);
+
+    expect(picked.map((entry) => entry.media.id)).toEqual([3, 2]);
+  });
 });

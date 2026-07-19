@@ -66,4 +66,36 @@ describe('AnimeCard', () => {
     render(<AnimeCard anime={{ ...anime, seasonYear: null }} />);
     expect(screen.getByText('Pas encore diffusé · Action, Adventure')).toBeInTheDocument();
   });
+
+  it('shows a "Bonus" tag with an explanation when marked as the bonus pick', () => {
+    render(<AnimeCard anime={anime} score={4} bonus bonusReason="Pépite peu connue du genre Action." />);
+    expect(screen.getByRole('button', { name: 'Bonus' })).toBeInTheDocument();
+    expect(screen.getByText('Pépite peu connue du genre Action.')).toBeInTheDocument();
+  });
+
+  it('does not show a "Bonus" tag for regular results', () => {
+    render(<AnimeCard anime={anime} score={4} />);
+    expect(screen.queryByText('Bonus')).not.toBeInTheDocument();
+  });
+
+  it('hides the card content behind a reveal button in gacha mode', () => {
+    render(<AnimeCard anime={anime} score={4} gacha />);
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+    expect(screen.queryByText('Score : 4.0')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Révéler One Piece' })).toBeInTheDocument();
+  });
+
+  it('reveals the card content after clicking the gacha reveal button', async () => {
+    render(<AnimeCard anime={anime} score={4} gacha />);
+    await userEvent.click(screen.getByRole('button', { name: 'Révéler One Piece' }));
+
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Score : 4.0' })).toBeInTheDocument();
+  });
+
+  it('shows the card content immediately when gacha mode is off', () => {
+    render(<AnimeCard anime={anime} score={4} gacha={false} />);
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Révéler/ })).not.toBeInTheDocument();
+  });
 });

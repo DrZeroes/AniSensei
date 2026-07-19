@@ -58,6 +58,33 @@ describe('buildCandidatePool', () => {
     expect(pool.map((entry) => entry.media.id)).toEqual([2]);
   });
 
+  it('flags candidates from franchise-relation nodes as guaranteed', () => {
+    const pool = buildCandidatePool({
+      baseList: [base],
+      recommendationNodes: [
+        { rating: 10, media: candidateA },
+        { rating: 100, media: candidateB, isRelation: true },
+      ],
+    });
+
+    expect(pool.find((entry) => entry.media.id === 2).guaranteed).toBe(false);
+    expect(pool.find((entry) => entry.media.id === 3).guaranteed).toBe(true);
+  });
+
+  it('keeps the guaranteed flag even when a later, higher-scoring node overwrites the score', () => {
+    const pool = buildCandidatePool({
+      baseList: [base],
+      recommendationNodes: [
+        { rating: 0, media: candidateA, isRelation: true },
+        { rating: 100, media: candidateA }, // same anime, also recommended generically, higher score
+      ],
+    });
+
+    expect(pool).toHaveLength(1);
+    expect(pool[0].guaranteed).toBe(true);
+    expect(pool[0].score).toBeCloseTo(15); // genre(2)+studio(3) + rating(100)*0.1
+  });
+
   it('caps the pool at 20 entries', () => {
     const nodes = Array.from({ length: 30 }, (_, i) => ({
       rating: i,

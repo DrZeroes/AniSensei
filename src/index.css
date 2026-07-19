@@ -334,6 +334,51 @@ button:focus-visible {
   transform: translateY(-3px);
 }
 
+/* Gacha mode: the card starts face-down and reveals its content on click. */
+.anime-card--hidden {
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: linear-gradient(135deg, var(--bg-elevated), var(--bg-elevated-2));
+  border-style: dashed;
+}
+
+.anime-card__reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.anime-card__reveal-icon {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+
+@keyframes card-flip-reveal {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0.4;
+  }
+  to {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+.anime-card--revealed {
+  animation: card-flip-reveal 0.4s ease;
+}
+
 /* Flex items keep a stacking context from the card-reveal animation's lingering
    transform even after it ends, so a later card in the grid paints over an
    earlier card's open score tooltip. Raise the active card above its siblings. */
@@ -381,6 +426,10 @@ button:focus-visible {
 }
 
 .anime-card__match {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   margin: 0.4rem 0.75rem 0;
 }
 
@@ -580,8 +629,24 @@ button:focus-visible {
 
 .base-picker__actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 1rem;
+}
+
+.gacha-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.gacha-toggle input {
+  accent-color: var(--accent-2);
 }
 
 /* Gacha-style reveal animations */
@@ -601,22 +666,14 @@ button:focus-visible {
   animation: card-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.results-grid .anime-card:nth-child(1) { animation-delay: 0ms; }
-.results-grid .anime-card:nth-child(2) { animation-delay: 120ms; }
-.results-grid .anime-card:nth-child(3) { animation-delay: 240ms; }
-.results-grid .anime-card:nth-child(4) { animation-delay: 360ms; }
-.results-grid .anime-card:nth-child(5) { animation-delay: 480ms; }
-
-.discovery-pick {
-  margin-top: 1.5rem;
-}
-
-.discovery-pick h3 {
-  background: linear-gradient(90deg, #ffd76a, var(--accent-2), var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+/* The bonus card sits in the same grid but keeps its own later, more elaborate
+   entrance (see .anime-card--bonus below), so it's excluded from the ordinary
+   staggered delays here. */
+.results-grid .anime-card:not(.anime-card--bonus):nth-child(1) { animation-delay: 0ms; }
+.results-grid .anime-card:not(.anime-card--bonus):nth-child(2) { animation-delay: 120ms; }
+.results-grid .anime-card:not(.anime-card--bonus):nth-child(3) { animation-delay: 240ms; }
+.results-grid .anime-card:not(.anime-card--bonus):nth-child(4) { animation-delay: 360ms; }
+.results-grid .anime-card:not(.anime-card--bonus):nth-child(5) { animation-delay: 480ms; }
 
 @keyframes shiny-pop {
   0% {
@@ -657,7 +714,11 @@ button:focus-visible {
   }
 }
 
-.discovery-pick .anime-card {
+/* The bonus "Découverte" card sits inline in the results grid, but keeps a
+   distinct shiny treatment and a later entrance so it visibly pops in after
+   the other 5. Specificity beats the plain ".results-grid .anime-card" rule
+   above since both target elements that are now literal grid children. */
+.results-grid .anime-card--bonus {
   border: 2px solid transparent;
   background-image: linear-gradient(var(--bg-elevated), var(--bg-elevated)),
     linear-gradient(120deg, #ffd76a, var(--accent-2), var(--accent), #ffd76a);
@@ -669,7 +730,7 @@ button:focus-visible {
 
 /* The shine sweep is clipped to the cover image (not the whole card) so the
    card's overflow stays visible — needed for the score-detail popup below. */
-.discovery-pick .anime-card__cover::after {
+.anime-card--bonus .anime-card__cover::after {
   content: '';
   position: absolute;
   top: -50%;
@@ -681,6 +742,11 @@ button:focus-visible {
   pointer-events: none;
 }
 
+.anime-card__bonus-tag {
+  background: linear-gradient(90deg, #ffd76a, var(--accent-2));
+  color: #2a1a00;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Keep a near-instant fade so appearing results are still noticeable, but drop
      the large transform/scale motion and the two continuously looping effects. */
@@ -688,11 +754,11 @@ button:focus-visible {
     animation-duration: 0.01ms !important;
   }
 
-  .discovery-pick .anime-card {
+  .results-grid .anime-card--bonus {
     animation: card-reveal 0.01ms 700ms both !important;
   }
 
-  .discovery-pick .anime-card__cover::after {
+  .anime-card--bonus .anime-card__cover::after {
     animation: none !important;
   }
 }

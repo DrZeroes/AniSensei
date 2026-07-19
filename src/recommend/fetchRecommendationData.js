@@ -51,7 +51,9 @@ export async function fetchRecommendationData(baseAnimeIds) {
     baseAnimeIds.map((id) => getAnimeRecommendations(id))
   );
   const relationLists = await Promise.all(baseAnimeIds.map((id) => getAnimeRelations(id)));
-  const relationNodes = relationLists.flat().map((media) => ({ rating: RELATION_RATING_BOOST, media }));
+  const relationNodes = relationLists
+    .flat()
+    .map((media) => ({ rating: RELATION_RATING_BOOST, media, isRelation: true }));
   const recommendationNodes = [...recommendationLists.flat(), ...relationNodes];
 
   const localList = getList();

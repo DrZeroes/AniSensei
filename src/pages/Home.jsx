@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar.jsx';
 import AnimeCard from '../components/AnimeCard.jsx';
+import ChecklistSection from '../components/ChecklistSection.jsx';
 import { fetchRecommendationData } from '../recommend/fetchRecommendationData.js';
 import { pickWeighted } from '../recommend/pickResults.js';
 import { explainMatch, buildScoreTooltip } from '../recommend/explain.js';
@@ -33,7 +34,9 @@ function Home() {
 
   const localList = getList();
   const favoriteEntries = localList.filter((entry) => entry.note === 'coup_de_coeur');
-  const seenEntries = localList.filter((entry) => entry.status === 'vu');
+  // Anime already listed under "coups de cœur" aren't repeated here, even if also marked "vu".
+  const seenEntries = localList.filter((entry) => entry.status === 'vu' && entry.note !== 'coup_de_coeur');
+  const selectedIds = baseAnimes.map((anime) => anime.id);
 
   function addBaseAnime(anime) {
     setBaseAnimes((prev) => (prev.some((a) => a.id === anime.id) ? prev : [...prev, anime]));
@@ -165,37 +168,18 @@ function Home() {
         )}
 
         <div className="base-picker__checklists">
-          <fieldset className="checklist">
-            <legend>Mes coups de cœur</legend>
-            {favoriteEntries.length === 0 && (
-              <p className="checklist__empty">Aucun anime marqué coup de cœur.</p>
-            )}
-            {favoriteEntries.map((entry) => (
-              <label key={entry.animeId} className="checklist__item">
-                <input
-                  type="checkbox"
-                  checked={baseAnimes.some((a) => a.id === entry.animeId)}
-                  onChange={() => toggleChecklistAnime(entry)}
-                />
-                {entry.title}
-              </label>
-            ))}
-          </fieldset>
-
-          <fieldset className="checklist">
-            <legend>Mes animes vus</legend>
-            {seenEntries.length === 0 && <p className="checklist__empty">Aucun anime marqué vu.</p>}
-            {seenEntries.map((entry) => (
-              <label key={entry.animeId} className="checklist__item">
-                <input
-                  type="checkbox"
-                  checked={baseAnimes.some((a) => a.id === entry.animeId)}
-                  onChange={() => toggleChecklistAnime(entry)}
-                />
-                {entry.title}
-              </label>
-            ))}
-          </fieldset>
+          <ChecklistSection
+            title="Mes coups de cœur"
+            entries={favoriteEntries}
+            selectedIds={selectedIds}
+            onToggle={toggleChecklistAnime}
+          />
+          <ChecklistSection
+            title="Mes animes vus"
+            entries={seenEntries}
+            selectedIds={selectedIds}
+            onToggle={toggleChecklistAnime}
+          />
         </div>
 
         <div className="base-picker__actions">

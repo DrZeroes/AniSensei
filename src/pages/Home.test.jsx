@@ -28,6 +28,11 @@ function renderHome() {
   );
 }
 
+async function selectFromChecklist(user, sectionTitle, animeTitle) {
+  await user.click(screen.getByRole('button', { name: sectionTitle }));
+  await user.click(screen.getByLabelText(animeTitle));
+}
+
 describe('Home', () => {
   beforeEach(() => {
     fetchRecommendationData.mockReset();
@@ -107,7 +112,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('One Piece'));
+    await selectFromChecklist(user, 'Mes animes vus', 'One Piece');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
 
     await waitFor(() => expect(fetchRecommendationData).toHaveBeenCalledWith([1]));
@@ -127,10 +132,24 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Fate/stay night'));
+    await selectFromChecklist(user, 'Mes coups de cœur', 'Fate/stay night');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
 
     await waitFor(() => expect(fetchRecommendationData).toHaveBeenCalledWith([4]));
+  });
+
+  it('does not show an anime under "Mes animes vus" if it is already a favorite', async () => {
+    getList.mockReturnValue([
+      { animeId: 4, title: 'Fate/stay night', status: 'vu', note: 'coup_de_coeur', excluded: false },
+    ]);
+    const user = userEvent.setup();
+
+    renderHome();
+    await user.click(screen.getByRole('button', { name: 'Mes coups de cœur' }));
+    expect(screen.getByLabelText('Fate/stay night')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Mes animes vus' }));
+    expect(screen.getByText('Aucun anime ici.')).toBeInTheDocument();
   });
 
   it('shows the score and a genre-based reason for each result', async () => {
@@ -144,7 +163,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
 
     await waitFor(() => expect(screen.getByText('Score : 7.5')).toBeInTheDocument());
@@ -162,7 +181,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
     await waitFor(() => screen.getByText('Tsukihime'));
     await user.click(screen.getByRole('button', { name: 'Déjà vu' }));
@@ -182,7 +201,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
     await waitFor(() => screen.getByText('Tsukihime'));
     await user.click(screen.getByRole('button', { name: 'Ne plus recommander' }));
@@ -203,7 +222,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
     await waitFor(() => screen.getByRole('alert'));
     await user.click(screen.getByRole('button', { name: 'Réessayer' }));
@@ -223,7 +242,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
 
     await waitFor(() => expect(screen.getByText('Découverte')).toBeInTheDocument());
@@ -241,7 +260,7 @@ describe('Home', () => {
     const user = userEvent.setup();
 
     renderHome();
-    await user.click(screen.getByLabelText('Base Anime'));
+    await selectFromChecklist(user, 'Mes animes vus', 'Base Anime');
     await user.click(screen.getByRole('button', { name: 'Me conseiller un anime' }));
     await waitFor(() => screen.getByText('Tsukihime'));
 

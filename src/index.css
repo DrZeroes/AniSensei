@@ -451,17 +451,45 @@ button:focus-visible {
 .checklist {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.5rem 0.75rem 0.75rem;
   flex: 1 1 220px;
-  max-height: 180px;
-  overflow-y: auto;
 }
 
-.checklist legend {
-  padding: 0 0.4rem;
+.checklist__toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0.55rem 0.75rem;
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.checklist__toggle::after {
+  content: '▾';
+  float: right;
+}
+
+.checklist__toggle[aria-expanded='true']::after {
+  content: '▴';
+}
+
+.checklist__toggle:hover {
+  color: var(--text);
+}
+
+.checklist__body {
+  padding: 0 0.75rem 0.75rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.checklist__search {
+  width: 100%;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
 }
 
 .checklist__item {

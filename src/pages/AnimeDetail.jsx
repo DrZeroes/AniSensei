@@ -72,7 +72,8 @@ function AnimeDetail() {
       <p>Tags : {anime.tags.join(', ')}</p>
       <p>Studios : {anime.studios.join(', ')}</p>
       <p>
-        Format : {anime.format} · Épisodes : {anime.episodes ?? '?'} · Score : {anime.averageScore ?? '?'}
+        Année : {anime.seasonYear ?? 'Pas encore diffusé'} · Format : {anime.format} · Épisodes :{' '}
+        {anime.episodes ?? '?'} · Score : {anime.averageScore ?? '?'}
       </p>
 
       <div className="anime-detail__personal">

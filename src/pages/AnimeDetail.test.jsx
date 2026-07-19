@@ -59,6 +59,24 @@ describe('AnimeDetail', () => {
     expect(screen.getByText('Tsukihime')).toBeInTheDocument();
   });
 
+  it('shows the season year when available', async () => {
+    getAnimeDetails.mockResolvedValue({ ...details, seasonYear: 2006 });
+    getAnimeRecommendations.mockResolvedValue([]);
+
+    renderDetail();
+
+    await waitFor(() => expect(screen.getByText(/Année : 2006/)).toBeInTheDocument());
+  });
+
+  it('shows "Pas encore diffusé" when no season year is available yet', async () => {
+    getAnimeDetails.mockResolvedValue({ ...details, seasonYear: null });
+    getAnimeRecommendations.mockResolvedValue([]);
+
+    renderDetail();
+
+    await waitFor(() => expect(screen.getByText(/Année : Pas encore diffusé/)).toBeInTheDocument());
+  });
+
   it('shows an error state with a retry button when the fetch fails', async () => {
     getAnimeDetails.mockRejectedValueOnce(new Error('network'));
     getAnimeRecommendations.mockResolvedValue([]);

@@ -300,7 +300,6 @@ button:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: transform 0.15s ease;
@@ -315,7 +314,9 @@ button:focus-visible {
   width: 100%;
   padding: 0;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+  position: relative;
   background: var(--bg-elevated-2);
   text-align: left;
   cursor: pointer;
@@ -373,18 +374,18 @@ button:focus-visible {
 .anime-card__detail {
   display: none;
   position: absolute;
-  z-index: 20;
+  z-index: 30;
   top: 100%;
   left: 0;
-  margin-top: 0.35rem;
-  width: max-content;
-  max-width: 240px;
+  margin-top: 0.5rem;
+  width: 300px;
+  max-width: min(320px, 85vw);
   background: var(--bg-elevated-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.55rem 0.65rem;
-  font-size: 0.72rem;
-  line-height: 1.45;
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
   color: var(--text);
   box-shadow: var(--shadow);
   text-align: left;
@@ -394,6 +395,26 @@ button:focus-visible {
 .anime-card__score:focus + .anime-card__detail,
 .anime-card__score:focus-visible + .anime-card__detail {
   display: block;
+}
+
+.anime-card__detail-reason {
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.anime-card__detail-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.anime-card__detail-list li {
+  list-style: disc;
 }
 
 .anime-card p {
@@ -604,8 +625,6 @@ button:focus-visible {
 }
 
 .discovery-pick .anime-card {
-  position: relative;
-  overflow: hidden;
   border: 2px solid transparent;
   background-image: linear-gradient(var(--bg-elevated), var(--bg-elevated)),
     linear-gradient(120deg, #ffd76a, var(--accent-2), var(--accent), #ffd76a);
@@ -615,7 +634,9 @@ button:focus-visible {
     shiny-border 1.8s ease-in-out infinite 1.2s;
 }
 
-.discovery-pick .anime-card::after {
+/* The shine sweep is clipped to the cover image (not the whole card) so the
+   card's overflow stays visible — needed for the score-detail popup below. */
+.discovery-pick .anime-card__cover::after {
   content: '';
   position: absolute;
   top: -50%;
@@ -630,7 +651,7 @@ button:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .results-grid .anime-card,
   .discovery-pick .anime-card,
-  .discovery-pick .anime-card::after {
+  .discovery-pick .anime-card__cover::after {
     animation: none !important;
   }
 }

@@ -7,7 +7,8 @@ function badgeLabel(listEntry) {
 
 function metaLine(anime) {
   const genreText = (anime.genres ?? []).length > 0 ? anime.genres.join(', ') : null;
-  return [anime.seasonYear, genreText].filter(Boolean).join(' · ');
+  const yearText = anime.seasonYear ?? 'Pas encore diffusé';
+  return [yearText, genreText].filter(Boolean).join(' · ');
 }
 
 function AnimeCard({ anime, listEntry = null, score = null, reason = null, scoreDetail = null, onAddSeen, onExclude, onClick }) {
@@ -27,9 +28,14 @@ function AnimeCard({ anime, listEntry = null, score = null, reason = null, score
               Score : {score.toFixed(1)}
             </button>
             <span className="anime-card__detail" role="tooltip">
-              {reason && <div>{reason}</div>}
-              {scoreDetail &&
-                scoreDetail.split('\n').map((line, index) => <div key={index}>{line}</div>)}
+              {reason && <p className="anime-card__detail-reason">{reason}</p>}
+              {scoreDetail && (
+                <ul className="anime-card__detail-list">
+                  {scoreDetail.split('\n').map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              )}
             </span>
           </span>
         </div>

@@ -225,6 +225,29 @@ describe('browseCatalogue', () => {
     expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ tags: null }));
   });
 
+  it('sends a trimmed title search term', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ search: '  one piece  ' });
+
+    expect(anilistQuery).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ search: 'one piece' })
+    );
+  });
+
+  it('sends no search filter when the search term is empty', async () => {
+    anilistQuery.mockResolvedValue({
+      Page: { pageInfo: { hasNextPage: false }, media: [sampleMedia] },
+    });
+
+    await browseCatalogue({ search: '   ' });
+
+    expect(anilistQuery).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ search: null }));
+  });
+
   it('omits year and format from the variables when not provided', async () => {
     // AniList treats an explicit `seasonYear: null` / `format: null` as "field IS
     // NULL" rather than "no filter", collapsing results to almost nothing — so

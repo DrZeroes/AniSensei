@@ -316,6 +316,11 @@ button:focus-visible {
   accent-color: var(--accent-2);
 }
 
+.catalogue-search {
+  width: 100%;
+  max-width: 320px;
+}
+
 /* Tag filter */
 
 .tag-filter {

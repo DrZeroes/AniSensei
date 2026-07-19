@@ -11,8 +11,12 @@ const SORT_OPTIONS = [
   { value: 'TITLE_ROMAJI', label: 'Titre' },
 ];
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 function Catalogue() {
   const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [availableGenres, setAvailableGenres] = useState([]);
   const [genres, setGenres] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
@@ -33,6 +37,7 @@ function Catalogue() {
     try {
       const result = await browseCatalogue({
         page: targetPage,
+        search: debouncedSearch,
         genres,
         tags,
         year: year ? Number(year) : null,
@@ -54,10 +59,15 @@ function Catalogue() {
   }, []);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
+  useEffect(() => {
     setPage(1);
     loadPage(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [genres, tags, year, sort]);
+  }, [debouncedSearch, genres, tags, year, sort]);
 
   function toggleGenre(genre) {
     setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]));
@@ -133,6 +143,14 @@ function Catalogue() {
     <section>
       <h2>Catalogue</h2>
       <div className="catalogue-filters">
+        <input
+          type="text"
+          className="catalogue-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Rechercher un anime par titre..."
+          aria-label="Rechercher un anime par titre"
+        />
         <fieldset className="genre-filter">
           <legend>Genres</legend>
           <div className="genre-filter__options">

@@ -167,6 +167,7 @@ const CATALOGUE_QUERY = `
   query (
     $page: Int
     $perPage: Int
+    $search: String
     $genres: [String]
     $tags: [String]
     $year: Int
@@ -179,6 +180,7 @@ const CATALOGUE_QUERY = `
         type: ANIME
         isAdult: false
         status_not: NOT_YET_RELEASED
+        search: $search
         genre_in: $genres
         tag_in: $tags
         seasonYear: $year
@@ -203,6 +205,7 @@ const CATALOGUE_QUERY = `
 export async function browseCatalogue({
   page = 1,
   perPage = 20,
+  search = '',
   genres = [],
   tags = [],
   year = null,
@@ -213,6 +216,7 @@ export async function browseCatalogue({
   const data = await anilistQuery(CATALOGUE_QUERY, {
     page,
     perPage,
+    search: search.trim() ? search.trim() : null,
     genres: genres.length > 0 ? genres : null,
     tags: tags.length > 0 ? tags : null,
     // AniList treats an explicit `null` for these scalar filters as "field IS NULL"

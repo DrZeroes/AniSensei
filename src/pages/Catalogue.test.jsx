@@ -45,6 +45,20 @@ describe('Catalogue', () => {
     expect(browseCatalogue).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
   });
 
+  it('searches by title, debounced, and resets to page 1', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText('Rechercher un anime par titre'), 'One Piece');
+
+    await waitFor(() =>
+      expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'One Piece', page: 1 }))
+    );
+  });
+
   it('appends the next page when "Charger plus" is clicked', async () => {
     browseCatalogue
       .mockResolvedValueOnce({ media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }], hasNextPage: true })

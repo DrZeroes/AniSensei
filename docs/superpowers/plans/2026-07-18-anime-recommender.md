@@ -1,4 +1,4 @@
-# AnimeAdvice Implementation Plan
+# AniSensei Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -11,12 +11,12 @@
 ## Global Constraints
 
 - No backend, no accounts, no API keys — all data comes from `https://graphql.anilist.co` (public, unauthenticated) and `localStorage`.
-- `localStorage` key: `animeAdvice.list`. Entry schema (see spec section 3, amended):
+- `localStorage` key: `aniSensei.list`. Entry schema (see spec section 3, amended):
   `{ animeId, title, coverImage, genres, studios, seasonYear, status, note, excluded, watchedAt, comment, addedAt }`.
   - `status`: `"a_voir" | "vu"`.
   - `note`: `"coup_de_coeur" | "aime" | "pas_aime" | null`.
 - AniList calls are mocked in every automated test — no real network calls in the test suite.
-- Vite `base` is `/animeAdvice/` (matches the GitHub repo name) for correct GitHub Pages asset paths.
+- Vite `base` is `/AniSensei/` (matches the GitHub repo name) for correct GitHub Pages asset paths.
 - Node.js 20+ and npm are required locally.
 - Every new module ships with a Vitest test file in the same task.
 
@@ -42,7 +42,7 @@
 `package.json`:
 ```json
 {
-  "name": "animeadvice",
+  "name": "anisensei",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -76,7 +76,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/animeAdvice/',
+  base: '/AniSensei/',
   test: {
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
@@ -92,7 +92,7 @@ export default defineConfig({
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AnimeAdvice</title>
+    <title>AniSensei</title>
   </head>
   <body>
     <div id="root"></div>
@@ -139,9 +139,9 @@ import { describe, expect, it } from 'vitest';
 import App from './App.jsx';
 
 describe('App', () => {
-  it('renders the AnimeAdvice title', () => {
+  it('renders the AniSensei title', () => {
     render(<App />);
-    expect(screen.getByText('AnimeAdvice')).toBeInTheDocument();
+    expect(screen.getByText('AniSensei')).toBeInTheDocument();
   });
 });
 ```
@@ -159,16 +159,16 @@ import { HashRouter, Routes, Route, Link } from 'react-router-dom';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
-        <h1>AnimeAdvice</h1>
+        <h1>AniSensei</h1>
         <nav>
           <Link to="/">Accueil</Link>
         </nav>
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<p>Bienvenue sur AnimeAdvice.</p>} />
+          <Route path="/" element={<p>Bienvenue sur AniSensei.</p>} />
         </Routes>
       </main>
     </HashRouter>
@@ -666,7 +666,7 @@ git commit -m "Add AniList search, details, recommendations and catalogue querie
 
 **Interfaces:**
 - Produces:
-  - `STORAGE_KEY = 'animeAdvice.list'`
+  - `STORAGE_KEY = 'aniSensei.list'`
   - `getList(): Array<ListEntry>` — returns `[]` on missing or corrupted data.
   - `saveList(list: Array<ListEntry>): void`
   - `upsertAnime(entry: { animeId: number, [key]: any }): Array<ListEntry>` — creates a new entry with defaults if `animeId` is new, else merges fields into the existing entry. Returns the full updated list.
@@ -744,7 +744,7 @@ Expected: FAIL (`src/storage/listStorage.js` does not exist).
 
 `src/storage/listStorage.js`:
 ```js
-export const STORAGE_KEY = 'animeAdvice.list';
+export const STORAGE_KEY = 'aniSensei.list';
 
 export function getList() {
   try {
@@ -1770,7 +1770,7 @@ const candidate = { id: 2, title: 'Tsukihime', genres: [], studios: [], coverIma
 
 function renderHome() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Home />
     </MemoryRouter>
   );
@@ -2000,9 +2000,9 @@ import Home from './pages/Home.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
-        <h1>AnimeAdvice</h1>
+        <h1>AniSensei</h1>
         <nav>
           <Link to="/">Accueil</Link>
         </nav>
@@ -2064,7 +2064,7 @@ vi.mock('../storage/listStorage.js', () => ({
 
 function renderCatalogue() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Catalogue />
     </MemoryRouter>
   );
@@ -2261,9 +2261,9 @@ import Catalogue from './pages/Catalogue.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
-        <h1>AnimeAdvice</h1>
+        <h1>AniSensei</h1>
         <nav>
           <Link to="/">Accueil</Link>
           <Link to="/catalogue">Catalogue</Link>
@@ -2461,7 +2461,7 @@ const entry = {
 
 function renderMyList() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <MyList />
     </MemoryRouter>
   );
@@ -2594,7 +2594,7 @@ function MyList() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'animeadvice-liste.json';
+    link.download = 'anisensei-liste.json';
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -2725,9 +2725,9 @@ import MyList from './pages/MyList.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
-        <h1>AnimeAdvice</h1>
+        <h1>AniSensei</h1>
         <nav>
           <Link to="/">Accueil</Link>
           <Link to="/catalogue">Catalogue</Link>
@@ -2808,7 +2808,10 @@ const details = {
 
 function renderDetail(id = '1') {
   return render(
-    <MemoryRouter initialEntries={[`/anime/${id}`]}>
+    <MemoryRouter
+      initialEntries={[`/anime/${id}`]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <Routes>
         <Route path="/anime/:id" element={<AnimeDetail />} />
       </Routes>
@@ -3005,9 +3008,9 @@ import AnimeDetail from './pages/AnimeDetail.jsx';
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <header>
-        <h1>AnimeAdvice</h1>
+        <h1>AniSensei</h1>
         <nav>
           <Link to="/">Accueil</Link>
           <Link to="/catalogue">Catalogue</Link>
@@ -3411,7 +3414,7 @@ jobs:
 
 `README.md`:
 ```markdown
-# AnimeAdvice
+# AniSensei
 
 Application web qui recommande des animes à partir de titres donnés, de l'historique de visionnage ou des coups de cœur, avec gestion d'une liste personnelle (localStorage).
 
@@ -3440,9 +3443,9 @@ npm run preview
 Le workflow `.github/workflows/deploy.yml` construit et déploie automatiquement le site à chaque push sur `main`/`master`.
 
 Étapes manuelles à faire une seule fois sur GitHub :
-1. Pousser ce dépôt sur GitHub sous le nom `animeAdvice` (le chemin de base configuré dans `vite.config.js` est `/animeAdvice/`).
+1. Pousser ce dépôt sur GitHub sous le nom `AniSensei` (le chemin de base configuré dans `vite.config.js` est `/AniSensei/`).
 2. Dans les paramètres du dépôt, section **Pages**, choisir **Source: GitHub Actions**.
-3. Le site sera ensuite disponible à `https://<utilisateur>.github.io/animeAdvice/`.
+3. Le site sera ensuite disponible à `https://<utilisateur>.github.io/AniSensei/`.
 ```
 
 - [ ] **Step 3: Run the full test suite**

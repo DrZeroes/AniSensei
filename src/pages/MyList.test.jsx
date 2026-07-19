@@ -1,0 +1,103 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import MyList from './MyList.jsx';
+import { getList, upsertAnime, removeAnime } from '../storage/listStorage.js';
+
+vi.mock('../storage/listStorage.js', () => ({
+  getList: vi.fn(),
+  saveList: vi.fn(),
+  upsertAnime: vi.fn(),
+  removeAnime: vi.fn(),
+}));
+
+const entry = {
+  animeId: 1,
+  title: 'One Piece',
+  status: 'vu',
+  note: 'coup_de_coeur',
+  excluded: false,
+  comment: '',
+  genres: ['Action'],
+  studios: ['Toei Animation'],
+  seasonYear: 1999,
+  addedAt: 't',
+};
+
+function renderMyList() {
+  return render(
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MyList />
+    </MemoryRouter>
+  );
+}
+
+describe('MyList', () => {
+  beforeEach(() => {
+    getList.mockReset().mockReturnValue([entry]);
+    upsertAnime.mockReset();
+    removeAnime.mockReset().mockReturnValue([]);
+  });
+
+  it('renders entries from the stored list', () => {
+    renderMyList();
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+  });
+
+  it('filters entries by status', async () => {
+    getList.mockReturnValue([entry, { ...entry, animeId: 2, title: 'Naruto', status: 'a_voir' }]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.selectOptions(screen.getByLabelText('Filtrer par statut'), 'vu');
+
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
+  });
+
+  it('removes an entry when "Supprimer" is clicked', async () => {
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
+
+    expect(removeAnime).toHaveBeenCalledWith(1);
+  });
+
+  it('updates the note via the select', async () => {
+    upsertAnime.mockReturnValue([{ ...entry, note: 'aime' }]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.selectOptions(screen.getByLabelText('Note de One Piece'), 'aime');
+
+    expect(upsertAnime).toHaveBeenCalledWith(expect.objectContaining({ animeId: 1, note: 'aime' }));
+  });
+
+  it('shows a conflict dialog when the import has diverging entries', async () => {
+    const importedEntry = { ...entry, status: 'a_voir' };
+    const file = new File([JSON.stringify([importedEntry])], 'liste.json', {
+      type: 'application/json',
+    });
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.upload(screen.getByLabelText('Importer un fichier'), file);
+
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+  });
+
+  it('exports the list as a downloadable JSON file', async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.click(screen.getByRole('button', { name: 'Exporter' }));
+
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+});

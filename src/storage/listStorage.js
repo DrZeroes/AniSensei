@@ -31,6 +31,9 @@ export function upsertAnime(entry) {
       coverImage: entry.coverImage ?? null,
       genres: entry.genres ?? [],
       studios: entry.studios ?? [],
+      // New entries are fetched with the already-fixed AniList query (see
+      // queries.js), so their studios never need the backfill in MyList.jsx.
+      studiosRefreshed: true,
       tags: entry.tags ?? [],
       seasonYear: entry.seasonYear ?? null,
       status: entry.status ?? 'a_voir',

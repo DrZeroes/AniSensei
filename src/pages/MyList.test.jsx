@@ -26,6 +26,7 @@ const entry = {
   comment: '',
   genres: ['Action'],
   studios: ['Toei Animation'],
+  studiosRefreshed: true,
   tags: ['Pirates'],
   seasonYear: 1999,
   addedAt: 't',
@@ -128,7 +129,7 @@ describe('MyList', () => {
   it('backfills tags from AniList for entries added before tags were tracked', async () => {
     const entryWithoutTags = { ...entry, tags: undefined };
     getList.mockReturnValue([entryWithoutTags]);
-    getAnimeDetails.mockResolvedValue({ tags: ['Pirates', 'Time Skip'] });
+    getAnimeDetails.mockResolvedValue({ tags: ['Pirates', 'Time Skip'], studios: ['Toei Animation'] });
 
     renderMyList();
 
@@ -147,6 +148,21 @@ describe('MyList', () => {
     await waitFor(() => screen.getByText('One Piece'));
 
     expect(getAnimeDetails).not.toHaveBeenCalled();
+  });
+
+  it('backfills studios for entries fetched before the studios query was fixed to exclude producers', async () => {
+    const staleEntry = { ...entry, studiosRefreshed: undefined, studios: ['Toei Animation', 'Aniplex'] };
+    getList.mockReturnValue([staleEntry]);
+    getAnimeDetails.mockResolvedValue({ tags: ['Pirates'], studios: ['Toei Animation'] });
+
+    renderMyList();
+
+    await waitFor(() => expect(getAnimeDetails).toHaveBeenCalledWith(1));
+    await waitFor(() =>
+      expect(saveList).toHaveBeenCalledWith([
+        expect.objectContaining({ animeId: 1, studios: ['Toei Animation'], studiosRefreshed: true }),
+      ])
+    );
   });
 
   it('filters the visible list by title as you type', async () => {

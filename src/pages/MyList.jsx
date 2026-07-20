@@ -294,18 +294,21 @@ function MyList() {
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [groupForm, groupFormSearch, list, customGroups]);
 
-  // Entries added before tags were tracked have no `tags` field at all (unlike
-  // genres/studios, which were always stored) — backfill them from AniList once
-  // so the tag filter/sort actually cover the whole list, not just recent adds.
+  // Entries added before tags were tracked have no `tags` field at all, and
+  // entries fetched before the AniList studios query was fixed to only return
+  // the actual animation studio (instead of every credited company, e.g.
+  // Aniplex, Kodansha) still carry that old, noisy data — backfill both from
+  // AniList in one pass so the tag filter/sort and the studio stats aren't
+  // stuck with stale data forever.
   useEffect(() => {
-    const missingTags = list.filter((entry) => entry.tags === undefined);
-    if (missingTags.length === 0) return undefined;
+    const stale = list.filter((entry) => entry.tags === undefined || entry.studiosRefreshed !== true);
+    if (stale.length === 0) return undefined;
 
     let cancelled = false;
     Promise.all(
-      missingTags.map((entry) =>
+      stale.map((entry) =>
         getAnimeDetails(entry.animeId)
-          .then((details) => ({ animeId: entry.animeId, tags: details.tags }))
+          .then((details) => ({ animeId: entry.animeId, tags: details.tags, studios: details.studios }))
           .catch(() => null)
       )
     ).then((results) => {
@@ -313,8 +316,10 @@ function MyList() {
       const fetched = results.filter(Boolean);
       if (fetched.length === 0) return;
       let updated = getList();
-      for (const { animeId, tags } of fetched) {
-        updated = updated.map((entry) => (entry.animeId === animeId ? { ...entry, tags } : entry));
+      for (const { animeId, tags, studios } of fetched) {
+        updated = updated.map((entry) =>
+          entry.animeId === animeId ? { ...entry, tags, studios, studiosRefreshed: true } : entry
+        );
       }
       saveList(updated);
       setList(updated);

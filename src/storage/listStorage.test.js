@@ -24,6 +24,7 @@ describe('listStorage', () => {
       title: 'One Piece',
       genres: ['Action'],
       studios: [],
+      studiosRefreshed: true,
       tags: [],
       seasonYear: null,
       status: 'a_voir',

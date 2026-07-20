@@ -78,6 +78,46 @@ describe('Catalogue', () => {
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
   });
 
+  it('hides excluded anime by default, showing them once the checkbox is checked', async () => {
+    getList.mockReturnValue([{ animeId: 1, status: 'a_voir', excluded: true }]);
+    browseCatalogue.mockResolvedValue({
+      media: [
+        { id: 1, title: 'One Piece', genres: [], studios: [] },
+        { id: 2, title: 'Naruto', genres: [], studios: [] },
+      ],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes exclus' }));
+
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+  });
+
+  it('hides an anime that is both seen and excluded unless both checkboxes are checked', async () => {
+    getList.mockReturnValue([{ animeId: 1, status: 'vu', excluded: true }]);
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes déjà vus' }));
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument(); // still excluded
+
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes exclus' }));
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+  });
+
   it('searches by title, debounced, and resets to page 1', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();

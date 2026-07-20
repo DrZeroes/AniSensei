@@ -30,6 +30,7 @@ function Catalogue() {
   const [status, setStatus] = useState('idle');
   const [markedEntries, setMarkedEntries] = useState({});
   const [includeSeen, setIncludeSeen] = useState(false);
+  const [includeExcluded, setIncludeExcluded] = useState(false);
   const requestIdRef = useRef(0);
 
   async function loadPage(targetPage, replace) {
@@ -109,10 +110,15 @@ function Catalogue() {
     return markedEntries[animeId] ?? localList.find((entry) => entry.animeId === animeId) ?? null;
   }
 
-  // Hidden by default so the catalogue surfaces things you haven't seen yet;
-  // the checkbox opts back in to browsing everything, seen or not.
+  // Hidden by default so the catalogue surfaces things you haven't seen (or
+  // explicitly don't want recommended) yet; each checkbox opts back in.
   const seenIds = new Set(localList.filter((entry) => entry.status === 'vu').map((entry) => entry.animeId));
-  const visibleMedia = includeSeen ? media : media.filter((anime) => !seenIds.has(anime.id));
+  const excludedIds = new Set(localList.filter((entry) => entry.excluded).map((entry) => entry.animeId));
+  const visibleMedia = media.filter((anime) => {
+    if (!includeSeen && seenIds.has(anime.id)) return false;
+    if (!includeExcluded && excludedIds.has(anime.id)) return false;
+    return true;
+  });
 
   function handleAddSeen(anime) {
     upsertAnime({
@@ -219,13 +225,21 @@ function Catalogue() {
             </option>
           ))}
         </select>
-        <label className="catalogue-seen-toggle">
+        <label className="catalogue-toggle">
           <input
             type="checkbox"
             checked={includeSeen}
             onChange={(event) => setIncludeSeen(event.target.checked)}
           />
           Inclure les animes déjà vus
+        </label>
+        <label className="catalogue-toggle">
+          <input
+            type="checkbox"
+            checked={includeExcluded}
+            onChange={(event) => setIncludeExcluded(event.target.checked)}
+          />
+          Inclure les animes exclus
         </label>
       </div>
 

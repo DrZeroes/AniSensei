@@ -321,7 +321,7 @@ button:focus-visible {
   max-width: 320px;
 }
 
-.catalogue-seen-toggle {
+.catalogue-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -333,11 +333,11 @@ button:focus-visible {
   cursor: pointer;
 }
 
-.catalogue-seen-toggle input {
+.catalogue-toggle input {
   accent-color: var(--accent-2);
 }
 
-.catalogue-seen-toggle:has(input:checked) {
+.catalogue-toggle:has(input:checked) {
   border-color: var(--accent-2);
   color: var(--accent-2);
   font-weight: 600;

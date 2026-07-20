@@ -8,6 +8,7 @@ import AnimeDetail from './pages/AnimeDetail.jsx';
 import About from './pages/About.jsx';
 import Stats from './pages/Stats.jsx';
 import VersionBadge from './components/VersionBadge.jsx';
+import { backfillListMetadata } from './storage/backfillMetadata.js';
 
 const THEME_KEY = 'aniSensei.theme';
 
@@ -29,6 +30,14 @@ function App() {
   function toggleTheme() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }
+
+  // Kicked off once here (in addition to Ma liste/Stats, which also run it
+  // and share the same in-flight fetch) so stale studio/tag data starts
+  // refreshing as soon as the app loads, regardless of which page is opened
+  // first — e.g. Conseille-moi's recommendation matching also reads studios.
+  useEffect(() => {
+    backfillListMetadata();
+  }, []);
 
   return (
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

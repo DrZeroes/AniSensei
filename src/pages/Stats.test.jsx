@@ -1,11 +1,16 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Stats from './Stats.jsx';
 import { getList } from '../storage/listStorage.js';
+import { getAnimeDetails } from '../api/queries.js';
 
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(),
+  saveList: vi.fn(),
+}));
+vi.mock('../api/queries.js', () => ({
+  getAnimeDetails: vi.fn(),
 }));
 
 const watched = {
@@ -15,6 +20,7 @@ const watched = {
   excluded: false,
   genres: ['Action', 'Fantasy'],
   studios: ['Ufotable'],
+  studiosRefreshed: true,
   tags: ['Time Skip'],
 };
 const watched2 = {
@@ -24,13 +30,24 @@ const watched2 = {
   excluded: false,
   genres: ['Action'],
   studios: ['Ufotable'],
+  studiosRefreshed: true,
   tags: ['Time Skip', 'Tsundere'],
 };
-const toWatch = { animeId: 3, status: 'a_voir', note: null, excluded: false, genres: [], studios: [] };
+const toWatch = {
+  animeId: 3,
+  status: 'a_voir',
+  note: null,
+  excluded: false,
+  genres: [],
+  studios: [],
+  studiosRefreshed: true,
+  tags: [],
+};
 
 describe('Stats', () => {
   beforeEach(() => {
     getList.mockReset().mockReturnValue([watched, watched2, toWatch]);
+    getAnimeDetails.mockReset();
   });
 
   it('shows the summary tiles computed from the personal list', () => {
@@ -82,5 +99,21 @@ describe('Stats', () => {
     await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
 
     expect(screen.getByText("Rien à afficher pour l'instant.")).toBeInTheDocument();
+  });
+
+  it('refreshes studios still carrying pre-fix data (producers, not the animation studio) even if "Mes animés" was never opened', async () => {
+    const stale = { ...watched, studiosRefreshed: undefined, studios: ['Aniplex', 'Ufotable'] };
+    getList.mockReturnValue([stale]);
+    getAnimeDetails.mockResolvedValue({ tags: stale.tags, studios: ['Ufotable'] });
+
+    render(<Stats />);
+
+    // Before the refresh resolves, the stale data (Aniplex first) is still shown.
+    expect(screen.getByText('Aniplex').closest('.stat-tile')).toHaveTextContent('Studio favori');
+
+    await waitFor(() => expect(getAnimeDetails).toHaveBeenCalledWith(1));
+    await waitFor(() =>
+      expect(screen.getByText('Ufotable').closest('.stat-tile')).toHaveTextContent('Studio favori')
+    );
   });
 });

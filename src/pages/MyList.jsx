@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
-import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
 import { applyCustomGroups } from '../utils/applyCustomGroups.js';
 import { getCustomGroups, upsertCustomGroup, removeCustomGroup } from '../storage/customGroups.js';
+import { backfillListMetadata } from '../storage/backfillMetadata.js';
 import {
   serializeList,
   parseImportedList,
@@ -298,33 +298,13 @@ function MyList() {
   // entries fetched before the AniList studios query was fixed to only return
   // the actual animation studio (instead of every credited company, e.g.
   // Aniplex, Kodansha) still carry that old, noisy data — backfill both from
-  // AniList in one pass so the tag filter/sort and the studio stats aren't
-  // stuck with stale data forever.
+  // AniList (shared with Stats, which needs the same fix applied even if the
+  // user never opens "Mes animés" first).
   useEffect(() => {
-    const stale = list.filter((entry) => entry.tags === undefined || entry.studiosRefreshed !== true);
-    if (stale.length === 0) return undefined;
-
     let cancelled = false;
-    Promise.all(
-      stale.map((entry) =>
-        getAnimeDetails(entry.animeId)
-          .then((details) => ({ animeId: entry.animeId, tags: details.tags, studios: details.studios }))
-          .catch(() => null)
-      )
-    ).then((results) => {
-      if (cancelled) return;
-      const fetched = results.filter(Boolean);
-      if (fetched.length === 0) return;
-      let updated = getList();
-      for (const { animeId, tags, studios } of fetched) {
-        updated = updated.map((entry) =>
-          entry.animeId === animeId ? { ...entry, tags, studios, studiosRefreshed: true } : entry
-        );
-      }
-      saveList(updated);
-      setList(updated);
+    backfillListMetadata(list).then((updated) => {
+      if (!cancelled && updated) setList(updated);
     });
-
     return () => {
       cancelled = true;
     };

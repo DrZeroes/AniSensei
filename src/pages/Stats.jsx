@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getList } from '../storage/listStorage.js';
+import { backfillListMetadata } from '../storage/backfillMetadata.js';
 import { computeStats } from '../stats/computeStats.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
@@ -53,7 +54,23 @@ function BreakdownSection({ title, counts, translate = (name) => name }) {
 }
 
 function Stats() {
-  const stats = computeStats(getList());
+  const [list, setList] = useState(() => getList());
+
+  // Entries fetched before the AniList studios query was fixed to exclude
+  // producers/publishers (e.g. Aniplex, Kodansha) still carry that stale
+  // data — refresh them here too, in case the user never opens "Mes animés"
+  // (where this same backfill also runs) first.
+  useEffect(() => {
+    let cancelled = false;
+    backfillListMetadata(list).then((updated) => {
+      if (!cancelled && updated) setList(updated);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [list]);
+
+  const stats = computeStats(list);
 
   return (
     <section>

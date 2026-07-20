@@ -1036,6 +1036,11 @@ button:focus-visible {
   margin-bottom: 1.25rem;
 }
 
+.my-list-search {
+  width: 100%;
+  max-width: 320px;
+}
+
 .my-list-controls__action {
   display: inline-flex;
   align-items: center;

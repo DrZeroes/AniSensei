@@ -145,6 +145,20 @@ describe('MyList', () => {
     expect(getAnimeDetails).not.toHaveBeenCalled();
   });
 
+  it('filters the visible list by title as you type', async () => {
+    getList.mockReturnValue([entry, { ...entry, animeId: 2, title: 'Fate/stay night' }]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Rechercher dans ma liste par titre'), 'fate');
+
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+  });
+
   it('filters the visible list by genre, studio, and tag, offering only values present in the list', async () => {
     getList.mockReturnValue([
       entry, // genres: Action, studios: Toei Animation, tags: Pirates

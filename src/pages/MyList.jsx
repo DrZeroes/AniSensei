@@ -68,6 +68,7 @@ function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
   const [activeTab, setActiveTab] = useState('vus');
+  const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('title');
   const [genreFilter, setGenreFilter] = useState('');
   const [studioFilter, setStudioFilter] = useState('');
@@ -81,9 +82,11 @@ function MyList() {
   const availableTags = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.tags ?? [])), [list]);
 
   const visibleList = useMemo(() => {
+    const query = search.trim().toLowerCase();
     const items = list.filter(
       (entry) =>
         matchesTab(entry, activeTab) &&
+        (!query || entry.title.toLowerCase().includes(query)) &&
         (!genreFilter || (entry.genres ?? []).includes(genreFilter)) &&
         (!studioFilter || (entry.studios ?? []).includes(studioFilter)) &&
         (!tagFilter || (entry.tags ?? []).includes(tagFilter))
@@ -93,7 +96,7 @@ function MyList() {
       const bValue = Array.isArray(b[sortField]) ? b[sortField][0] ?? '' : b[sortField] ?? '';
       return String(aValue).localeCompare(String(bValue));
     });
-  }, [list, activeTab, sortField, genreFilter, studioFilter, tagFilter]);
+  }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter]);
 
   // Entries added before tags were tracked have no `tags` field at all (unlike
   // genres/studios, which were always stored) — backfill them from AniList once
@@ -193,6 +196,14 @@ function MyList() {
       </div>
 
       <div className="my-list-controls">
+        <input
+          type="text"
+          className="my-list-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Rechercher dans ma liste par titre..."
+          aria-label="Rechercher dans ma liste par titre"
+        />
         <select value={sortField} onChange={(event) => setSortField(event.target.value)} aria-label="Trier par">
           {SORT_FIELDS.map((field) => (
             <option key={field} value={field}>

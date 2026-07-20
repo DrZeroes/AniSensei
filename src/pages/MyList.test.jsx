@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MyList from './MyList.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
 import { getAnimeDetails } from '../api/queries.js';
+import { upsertCustomGroup } from '../storage/customGroups.js';
 
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(),
@@ -225,12 +226,13 @@ describe('MyList', () => {
     expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);
   });
 
-  it('groups anime that look like the same franchise into one collapsible block', async () => {
+  it('collapses entries that belong to a custom group into one block', async () => {
     getList.mockReturnValue([
       { ...entry, animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei', note: null },
       { ...entry, animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin', note: null },
       { ...entry, animeId: 3, title: 'Naruto', note: null },
     ]);
+    upsertCustomGroup({ title: 'Kara no Kyoukai: Fukan Fuukei', animeIds: [1, 2] });
     const user = userEvent.setup();
 
     renderMyList();
@@ -248,11 +250,12 @@ describe('MyList', () => {
     expect(screen.getByRole('button', { name: 'Kara no Kyoukai: Mirai Fukuin' })).toBeInTheDocument();
   });
 
-  it('flags a franchise group that contains a "coup de cœur" entry', () => {
+  it('flags a custom group that contains a "coup de cœur" entry', () => {
     getList.mockReturnValue([
       { ...entry, animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei', note: 'coup_de_coeur' },
       { ...entry, animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin', note: null },
     ]);
+    upsertCustomGroup({ title: 'Kara no Kyoukai: Fukan Fuukei', animeIds: [1, 2] });
 
     renderMyList();
 
@@ -274,21 +277,29 @@ describe('MyList', () => {
     expect(screen.queryByText(/animes$/)).not.toBeInTheDocument();
   });
 
-  it('lets the user manually group unrelated titles into a named block with a chosen thumbnail', async () => {
+  it('lets the user create a custom group from "Mes groupes", which then collapses in "Ma liste"', async () => {
     getList.mockReturnValue([
-      { ...entry, animeId: 1, title: 'Clannad', seasonYear: 2007, coverImage: 'clannad.jpg' },
-      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica', seasonYear: 2011, coverImage: 'madoka.jpg' },
+      { ...entry, animeId: 1, title: 'Clannad', coverImage: 'clannad.jpg' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica', coverImage: 'madoka.jpg' },
     ]);
     const user = userEvent.setup();
     renderMyList();
 
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
     await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
-    await user.click(screen.getByLabelText('Clannad'));
-    await user.click(screen.getByLabelText('Puella Magi Madoka Magica'));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Puella Magi Madoka Magica au groupe' }));
+
+    // Default proposed title is whichever anime is currently first (Clannad,
+    // added first).
+    expect(screen.getByLabelText('Titre du groupe')).toHaveValue('Clannad');
+
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    // Default proposed title is the earliest (by season year) selected title.
     expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.getByText('2 animes')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Ma liste' }));
     expect(screen.getByText('2 animes')).toBeInTheDocument();
     expect(screen.queryByText('Puella Magi Madoka Magica')).not.toBeInTheDocument();
 
@@ -296,20 +307,42 @@ describe('MyList', () => {
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
   });
 
-  it('allows renaming a custom group and deleting it', async () => {
+  it('lets the user reorder members within a group, which updates the default title proposal', async () => {
     getList.mockReturnValue([
-      { ...entry, animeId: 1, title: 'Clannad', seasonYear: 2007 },
-      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica', seasonYear: 2011 },
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica' },
     ]);
     const user = userEvent.setup();
     renderMyList();
 
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
     await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
-    await user.click(screen.getByLabelText('Clannad'));
-    await user.click(screen.getByLabelText('Puella Magi Madoka Magica'));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Puella Magi Madoka Magica au groupe' }));
+
+    await user.click(screen.getByRole('button', { name: 'Monter Puella Magi Madoka Magica' }));
+
+    expect(screen.getByLabelText('Titre du groupe')).toHaveValue('Puella Magi Madoka Magica');
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
+  });
+
+  it('allows renaming a custom group and deleting it from "Mes groupes"', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica' },
+    ]);
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Puella Magi Madoka Magica au groupe' }));
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    await user.click(screen.getByRole('button', { name: 'Modifier le groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier' }));
     const titleInput = screen.getByLabelText('Titre du groupe');
     await user.clear(titleInput);
     await user.type(titleInput, 'Mes tranches de vie tristes');
@@ -317,10 +350,10 @@ describe('MyList', () => {
 
     expect(screen.getByText('Mes tranches de vie tristes')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Modifier le groupe' }));
-    await user.click(screen.getByRole('button', { name: 'Supprimer le groupe' }));
-
+    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
     expect(screen.queryByText('Mes tranches de vie tristes')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Ma liste' }));
     expect(screen.getByText('Clannad')).toBeInTheDocument();
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
   });
@@ -368,5 +401,49 @@ describe('MyList', () => {
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
     vi.unstubAllGlobals();
+  });
+
+  it('includes custom groups in the exported JSON', async () => {
+    getList.mockReturnValue([{ ...entry, animeId: 1, title: 'Clannad' }]);
+    let capturedBlob;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn((blob) => {
+        capturedBlob = blob;
+        return 'blob:mock';
+      }),
+      revokeObjectURL: vi.fn(),
+    });
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Ma liste' }));
+    await user.click(screen.getByRole('button', { name: 'Exporter' }));
+
+    const parsed = JSON.parse(await capturedBlob.text());
+    expect(parsed.customGroups).toHaveLength(1);
+    expect(parsed.customGroups[0]).toMatchObject({ title: 'Clannad', animeIds: [1] });
+
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('imports custom groups from the new export format alongside the list', async () => {
+    const importedGroup = { id: 'g1', title: 'Groupe importé', animeIds: [1], coverAnimeId: 1 };
+    const file = new File([JSON.stringify({ list: [entry], customGroups: [importedGroup] })], 'liste.json', {
+      type: 'application/json',
+    });
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.upload(screen.getByLabelText('Importer un fichier'), file);
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+
+    expect(screen.getByText('Groupe importé')).toBeInTheDocument();
   });
 });

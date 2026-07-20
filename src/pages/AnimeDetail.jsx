@@ -72,10 +72,22 @@ function AnimeDetail() {
       {anime.coverImage && <img src={anime.coverImage} alt={anime.title} />}
       <p>{anime.description}</p>
       <p>
-        <span className="anime-detail__label">Genres</span> : {anime.genres.map(translateGenre).join(', ')}
+        <span className="anime-detail__label">Genres</span> :{' '}
+        {anime.genres.map((genre, index) => (
+          <span key={genre}>
+            <span title={genre}>{translateGenre(genre)}</span>
+            {index < anime.genres.length - 1 ? ', ' : ''}
+          </span>
+        ))}
       </p>
       <p>
-        <span className="anime-detail__label">Tags</span> : {anime.tags.map(translateTag).join(', ')}
+        <span className="anime-detail__label">Tags</span> :{' '}
+        {anime.tags.map((tag, index) => (
+          <span key={tag}>
+            <span title={tag}>{translateTag(tag)}</span>
+            {index < anime.tags.length - 1 ? ', ' : ''}
+          </span>
+        ))}
       </p>
       <p>
         <span className="anime-detail__label">Studios</span> : {anime.studios.join(', ')}

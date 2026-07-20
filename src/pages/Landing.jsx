@@ -14,9 +14,9 @@ const SECTIONS = [
   },
   {
     to: '/ma-liste',
-    title: 'Ma liste',
+    title: 'Mes animés',
     description:
-      'Gère ta liste personnelle : statut (vu / à voir), note, commentaire, triable et filtrable par genre, tag ou studio. Exportable en fichier, et réimportable ailleurs (ou en cas de changement d\'appareil).',
+      'Onglet "Ma liste" : statut (vu / à voir), note, commentaire, triable et filtrable par genre ou tag (recherche en français ou en anglais) ou studio. Onglet "Mes groupes" : regroupe toi-même les animes d\'une même franchise (titre, contenu et miniature à ta main, réordonnables). Le tout exportable en fichier et réimportable ailleurs (ou en cas de changement d\'appareil).',
   },
   {
     to: '/stats',

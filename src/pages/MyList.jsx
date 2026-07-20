@@ -5,7 +5,7 @@ import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStor
 import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
-import { groupFranchises } from '../utils/groupFranchises.js';
+import { applyCustomGroups } from '../utils/applyCustomGroups.js';
 import { getCustomGroups, upsertCustomGroup, removeCustomGroup } from '../storage/customGroups.js';
 import {
   serializeList,
@@ -34,6 +34,11 @@ const NOTE_LABELS = {
   aime: '👍 Aimé',
   pas_aime: '👎 Pas aimé',
 };
+
+const MAIN_TABS = [
+  { id: 'liste', label: 'Ma liste' },
+  { id: 'groupes', label: 'Mes groupes' },
+];
 
 // Mirrors the categories shown on the Stats page so the counts there match what
 // filtering to that tab here shows.
@@ -67,44 +72,18 @@ function uniqueSorted(values) {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 
-// The earliest entry (by season year) among the given ids is used as the
-// default group title/thumbnail proposal — a reasonable guess at "the first
-// work of the saga" — but the user can always override both.
+// The default group title/thumbnail proposal is whichever anime is currently
+// first in the group's (user-reorderable) order — not an automatic guess.
 function computeDefaultMember(animeIds, list) {
-  const members = list.filter((entry) => animeIds.includes(entry.animeId));
-  if (members.length === 0) return null;
-  return [...members].sort((a, b) => (a.seasonYear ?? Infinity) - (b.seasonYear ?? Infinity))[0];
-}
-
-// Merges user-defined groups with the automatic franchise-key grouping:
-// entries that belong to a custom group are pulled out of the automatic
-// grouping entirely so they only appear once, under the custom group.
-function buildGroupedList(visibleList, customGroups) {
-  const customByAnimeId = new Map();
-  for (const group of customGroups) {
-    for (const animeId of group.animeIds) customByAnimeId.set(animeId, group);
-  }
-
-  const autoEntries = visibleList.filter((entry) => !customByAnimeId.has(entry.animeId));
-  const autoGroups = groupFranchises(autoEntries).map((group) => ({ ...group, custom: null }));
-
-  const seenGroupIds = new Set();
-  const customBlocks = [];
-  for (const entry of visibleList) {
-    const group = customByAnimeId.get(entry.animeId);
-    if (!group || seenGroupIds.has(group.id)) continue;
-    seenGroupIds.add(group.id);
-    const members = visibleList.filter((item) => group.animeIds.includes(item.animeId));
-    customBlocks.push({ key: `custom-${group.id}`, entries: members, custom: group });
-  }
-
-  const firstIndex = (block) => visibleList.findIndex((entry) => entry.animeId === block.entries[0].animeId);
-  return [...autoGroups, ...customBlocks].sort((a, b) => firstIndex(a) - firstIndex(b));
+  const firstId = animeIds[0];
+  if (firstId === undefined) return null;
+  return list.find((entry) => entry.animeId === firstId) ?? null;
 }
 
 function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
+  const [mainTab, setMainTab] = useState('liste');
   const [activeTab, setActiveTab] = useState('vus');
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('title');
@@ -144,13 +123,27 @@ function MyList() {
     setGroupForm(null);
   }
 
-  function toggleAnimeInGroupForm(animeId) {
+  function addAnimeToGroupForm(animeId) {
+    setGroupForm((prev) => ({ ...prev, animeIds: [...prev.animeIds, animeId] }));
+  }
+
+  function removeAnimeFromGroupForm(animeId) {
     setGroupForm((prev) => ({
       ...prev,
-      animeIds: prev.animeIds.includes(animeId)
-        ? prev.animeIds.filter((id) => id !== animeId)
-        : [...prev.animeIds, animeId],
+      animeIds: prev.animeIds.filter((id) => id !== animeId),
+      coverAnimeId: prev.coverAnimeId === animeId ? null : prev.coverAnimeId,
     }));
+  }
+
+  function moveAnimeInGroupForm(animeId, direction) {
+    setGroupForm((prev) => {
+      const index = prev.animeIds.indexOf(animeId);
+      const swapWith = index + direction;
+      if (swapWith < 0 || swapWith >= prev.animeIds.length) return prev;
+      const animeIds = [...prev.animeIds];
+      [animeIds[index], animeIds[swapWith]] = [animeIds[swapWith], animeIds[index]];
+      return { ...prev, animeIds };
+    });
   }
 
   function handleGroupTitleChange(event) {
@@ -233,17 +226,17 @@ function MyList() {
     });
   }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter]);
 
-  // Groups entries that look like the same franchise (e.g. several
-  // chapters/seasons of one series) into a single collapsible block, so a
-  // long-running series doesn't dominate the list with one row each. User-
-  // defined groups (see the group form below) take priority over the
-  // automatic guess.
-  const groupedList = useMemo(() => buildGroupedList(visibleList, customGroups), [visibleList, customGroups]);
+  // Groups entries the user has explicitly put together in a custom group
+  // (see "Mes groupes") into a single collapsible block — no automatic
+  // title-based guessing.
+  const groupedList = useMemo(() => applyCustomGroups(visibleList, customGroups), [visibleList, customGroups]);
 
   const groupFormEntries = useMemo(() => {
     if (!groupForm) return [];
     const query = groupFormSearch.trim().toLowerCase();
-    return list.filter((entry) => !query || entry.title.toLowerCase().includes(query));
+    return list.filter(
+      (entry) => !groupForm.animeIds.includes(entry.animeId) && (!query || entry.title.toLowerCase().includes(query))
+    );
   }, [groupForm, groupFormSearch, list]);
 
   // Entries added before tags were tracked have no `tags` field at all (unlike
@@ -345,7 +338,7 @@ function MyList() {
   }
 
   function handleExport() {
-    const blob = new Blob([serializeList(list)], { type: 'application/json' });
+    const blob = new Blob([serializeList(list, customGroups)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -361,7 +354,13 @@ function MyList() {
 
     try {
       const imported = parseImportedList(text);
-      const { merged, conflicts } = mergeLists(list, imported);
+      let updatedGroups = customGroups;
+      for (const group of imported.customGroups) {
+        updatedGroups = upsertCustomGroup(group);
+      }
+      setCustomGroups(updatedGroups);
+
+      const { merged, conflicts } = mergeLists(list, imported.list);
       if (conflicts.length === 0) {
         saveList(merged);
         setList(merged);
@@ -382,203 +381,274 @@ function MyList() {
     setPendingImport(null);
   }
 
+  function renderGroupForm() {
+    return (
+      <div className="group-form" role="dialog" aria-label={groupForm.id ? 'Modifier le groupe' : 'Créer un groupe'}>
+        <h3>{groupForm.id ? 'Modifier le groupe' : 'Créer un groupe personnalisé'}</h3>
+        <label className="group-form__field">
+          Titre du groupe
+          <input
+            type="text"
+            value={
+              groupForm.titleTouched ? groupForm.title : computeDefaultMember(groupForm.animeIds, list)?.title ?? ''
+            }
+            onChange={handleGroupTitleChange}
+            aria-label="Titre du groupe"
+          />
+        </label>
+
+        {groupForm.animeIds.length > 0 && (
+          <ul className="group-form__members">
+            {groupForm.animeIds.map((animeId, index) => {
+              const member = list.find((entry) => entry.animeId === animeId);
+              if (!member) return null;
+              const defaultCoverId = computeDefaultMember(groupForm.animeIds, list)?.animeId;
+              const isCoverChecked = groupForm.coverTouched
+                ? groupForm.coverAnimeId === animeId
+                : defaultCoverId === animeId;
+
+              return (
+                <li key={animeId} className="group-form__member">
+                  <label className="group-form__member-cover" title="Miniature du groupe">
+                    <input
+                      type="radio"
+                      name="group-cover"
+                      checked={isCoverChecked}
+                      onChange={() => handleGroupCoverChange(animeId)}
+                      aria-label={`Utiliser ${member.title} comme miniature du groupe`}
+                    />
+                    {member.coverImage && <img src={member.coverImage} alt="" className="my-list-item__cover" />}
+                  </label>
+                  <span className="group-form__member-title">{member.title}</span>
+                  <button
+                    type="button"
+                    aria-label={`Monter ${member.title}`}
+                    disabled={index === 0}
+                    onClick={() => moveAnimeInGroupForm(animeId, -1)}
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Descendre ${member.title}`}
+                    disabled={index === groupForm.animeIds.length - 1}
+                    onClick={() => moveAnimeInGroupForm(animeId, 1)}
+                  >
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Retirer ${member.title} du groupe`}
+                    onClick={() => removeAnimeFromGroupForm(animeId)}
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <input
+          type="text"
+          value={groupFormSearch}
+          onChange={(event) => setGroupFormSearch(event.target.value)}
+          placeholder="Rechercher un anime à ajouter..."
+          aria-label="Rechercher un anime à ajouter au groupe"
+        />
+        <ul className="group-form__anime-list">
+          {groupFormEntries.map((entry) => (
+            <li key={entry.animeId}>
+              <span>{entry.title}</span>
+              <button
+                type="button"
+                aria-label={`Ajouter ${entry.title} au groupe`}
+                onClick={() => addAnimeToGroupForm(entry.animeId)}
+              >
+                Ajouter
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="group-form__actions">
+          <button type="button" onClick={handleSaveGroup} disabled={groupForm.animeIds.length === 0}>
+            Enregistrer
+          </button>
+          <button type="button" onClick={closeGroupForm}>
+            Annuler
+          </button>
+          {groupForm.id && (
+            <button type="button" onClick={() => handleDeleteGroup(groupForm.id)}>
+              Supprimer le groupe
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section>
-      <h2>Ma liste</h2>
+      <h2>Mes animés</h2>
 
-      <div className="tabs" role="tablist">
-        {TABS.map((tab) => (
+      <div className="tabs" role="tablist" aria-label="Sections de Mes animés">
+        {MAIN_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             role="tab"
-            aria-selected={activeTab === tab.id}
-            className={activeTab === tab.id ? 'tab tab--active' : 'tab'}
-            onClick={() => setActiveTab(tab.id)}
+            aria-selected={mainTab === tab.id}
+            className={mainTab === tab.id ? 'tab tab--active' : 'tab'}
+            onClick={() => setMainTab(tab.id)}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="my-list-controls">
-        <input
-          type="text"
-          className="my-list-search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Rechercher dans ma liste par titre..."
-          aria-label="Rechercher dans ma liste par titre"
-        />
-        <select value={sortField} onChange={(event) => setSortField(event.target.value)} aria-label="Trier par">
-          {SORT_FIELDS.map((field) => (
-            <option key={field} value={field}>
-              {SORT_LABELS[field]}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          list="my-list-genre-options"
-          value={genreQuery}
-          onChange={handleGenreQueryChange}
-          placeholder="Filtrer par genre (FR ou EN)..."
-          aria-label="Filtrer par genre"
-        />
-        <datalist id="my-list-genre-options">
-          {availableGenres.map((genre) => (
-            <option key={genre} value={translateGenre(genre)} />
-          ))}
-        </datalist>
-        <select value={studioFilter} onChange={(event) => setStudioFilter(event.target.value)} aria-label="Filtrer par studio">
-          <option value="">Tous les studios</option>
-          {availableStudios.map((studio) => (
-            <option key={studio} value={studio}>
-              {studio}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          list="my-list-tag-options"
-          value={tagQuery}
-          onChange={handleTagQueryChange}
-          placeholder="Filtrer par tag (FR ou EN)..."
-          aria-label="Filtrer par tag"
-        />
-        <datalist id="my-list-tag-options">
-          {availableTags.map((tag) => (
-            <option key={tag} value={translateTag(tag)} />
-          ))}
-        </datalist>
-        <button type="button" className="my-list-controls__action" onClick={handleExport}>
-          Exporter
-        </button>
-        <label className="my-list-controls__action my-list-controls__action--file">
-          Importer
-          <input type="file" accept="application/json" onChange={handleImportFile} aria-label="Importer un fichier" />
-        </label>
-        <button type="button" className="my-list-controls__action" onClick={openCreateGroupForm}>
-          Créer un groupe
-        </button>
-      </div>
+      {mainTab === 'groupes' && (
+        <div className="my-groups">
+          <button type="button" className="my-list-controls__action" onClick={openCreateGroupForm}>
+            Créer un groupe
+          </button>
 
-      {groupForm && (
-        <div className="group-form" role="dialog" aria-label={groupForm.id ? 'Modifier le groupe' : 'Créer un groupe'}>
-          <h3>{groupForm.id ? 'Modifier le groupe' : 'Créer un groupe personnalisé'}</h3>
-          <label className="group-form__field">
-            Titre du groupe
-            <input
-              type="text"
-              value={
-                groupForm.titleTouched ? groupForm.title : computeDefaultMember(groupForm.animeIds, list)?.title ?? ''
-              }
-              onChange={handleGroupTitleChange}
-              aria-label="Titre du groupe"
-            />
-          </label>
-          <input
-            type="text"
-            value={groupFormSearch}
-            onChange={(event) => setGroupFormSearch(event.target.value)}
-            placeholder="Rechercher un anime à ajouter..."
-            aria-label="Rechercher un anime à ajouter au groupe"
-          />
-          <ul className="group-form__anime-list">
-            {groupFormEntries.map((entry) => (
-              <li key={entry.animeId}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={groupForm.animeIds.includes(entry.animeId)}
-                    onChange={() => toggleAnimeInGroupForm(entry.animeId)}
-                  />
-                  {entry.title}
-                </label>
-              </li>
-            ))}
-          </ul>
-          {groupForm.animeIds.length > 0 && (
-            <fieldset className="group-form__cover">
-              <legend>Miniature du groupe</legend>
-              {groupForm.animeIds.map((animeId) => {
-                const member = list.find((entry) => entry.animeId === animeId);
-                if (!member) return null;
-                const defaultCoverId = computeDefaultMember(groupForm.animeIds, list)?.animeId;
-                const isChecked = groupForm.coverTouched ? groupForm.coverAnimeId === animeId : defaultCoverId === animeId;
+          {groupForm && renderGroupForm()}
 
-                return (
-                  <label key={animeId} className="group-form__cover-option">
-                    <input
-                      type="radio"
-                      name="group-cover"
-                      checked={isChecked}
-                      onChange={() => handleGroupCoverChange(animeId)}
-                    />
-                    {member.coverImage && <img src={member.coverImage} alt="" className="my-list-item__cover" />}
-                    {member.title}
-                  </label>
-                );
-              })}
-            </fieldset>
-          )}
-          <div className="group-form__actions">
-            <button type="button" onClick={handleSaveGroup} disabled={groupForm.animeIds.length === 0}>
-              Enregistrer
-            </button>
-            <button type="button" onClick={closeGroupForm}>
-              Annuler
-            </button>
-            {groupForm.id && (
-              <button type="button" onClick={() => handleDeleteGroup(groupForm.id)}>
-                Supprimer le groupe
-              </button>
+          <ul className="my-groups-list">
+            {customGroups.length === 0 && (
+              <li className="my-groups-list__empty">Aucun groupe pour l'instant.</li>
             )}
-          </div>
+            {customGroups.map((group) => {
+              const cover = list.find((entry) => entry.animeId === group.coverAnimeId)?.coverImage;
+              return (
+                <li key={group.id} className="my-groups-list__item">
+                  {cover && <img src={cover} alt="" className="my-list-item__cover" />}
+                  <span className="my-groups-list__title">{group.title}</span>
+                  <span className="my-groups-list__count">{group.animeIds.length} animes</span>
+                  <button type="button" onClick={() => openEditGroupForm(group)}>
+                    Modifier
+                  </button>
+                  <button type="button" onClick={() => handleDeleteGroup(group.id)}>
+                    Supprimer
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
-      <ul className="my-list">
-        {groupedList.map((group) => {
-          if (group.entries.length === 1 && !group.custom) return renderEntry(group.entries[0]);
-
-          const expanded = !!expandedGroups[group.key];
-          const hasFavorite = group.entries.some((entry) => entry.note === 'coup_de_coeur');
-          const customCover = group.custom
-            ? list.find((entry) => entry.animeId === group.custom.coverAnimeId)?.coverImage
-            : null;
-          const cover = customCover ?? group.entries.find((entry) => entry.coverImage)?.coverImage;
-          const title = group.custom ? group.custom.title : group.entries[0].title;
-
-          return (
-            <li key={group.key} className={group.custom ? 'my-list-group my-list-group--custom' : 'my-list-group'}>
+      {mainTab === 'liste' && (
+        <>
+          <div className="tabs" role="tablist">
+            {TABS.map((tab) => (
               <button
+                key={tab.id}
                 type="button"
-                className="my-list-group__toggle"
-                aria-expanded={expanded}
-                onClick={() => toggleGroup(group.key)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={activeTab === tab.id ? 'tab tab--active' : 'tab'}
+                onClick={() => setActiveTab(tab.id)}
               >
-                {cover && <img src={cover} alt="" className="my-list-item__cover" />}
-                <span className="my-list-group__title">{title}</span>
-                <span className="my-list-group__count">{group.entries.length} animes</span>
-                {hasFavorite && <span className="my-list-group__favorite">Coup de cœur dedans</span>}
+                {tab.label}
               </button>
-              {group.custom && (
-                <button
-                  type="button"
-                  className="my-list-group__edit"
-                  onClick={() => openEditGroupForm(group.custom)}
-                >
-                  Modifier le groupe
-                </button>
-              )}
-              {expanded && (
-                <ul className="my-list-group__items">{group.entries.map((entry) => renderEntry(entry))}</ul>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+            ))}
+          </div>
+
+          <div className="my-list-controls">
+            <input
+              type="text"
+              className="my-list-search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Rechercher dans ma liste par titre..."
+              aria-label="Rechercher dans ma liste par titre"
+            />
+            <select value={sortField} onChange={(event) => setSortField(event.target.value)} aria-label="Trier par">
+              {SORT_FIELDS.map((field) => (
+                <option key={field} value={field}>
+                  {SORT_LABELS[field]}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              list="my-list-genre-options"
+              value={genreQuery}
+              onChange={handleGenreQueryChange}
+              placeholder="Filtrer par genre (FR ou EN)..."
+              aria-label="Filtrer par genre"
+            />
+            <datalist id="my-list-genre-options">
+              {availableGenres.map((genre) => (
+                <option key={genre} value={translateGenre(genre)} />
+              ))}
+            </datalist>
+            <select value={studioFilter} onChange={(event) => setStudioFilter(event.target.value)} aria-label="Filtrer par studio">
+              <option value="">Tous les studios</option>
+              {availableStudios.map((studio) => (
+                <option key={studio} value={studio}>
+                  {studio}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              list="my-list-tag-options"
+              value={tagQuery}
+              onChange={handleTagQueryChange}
+              placeholder="Filtrer par tag (FR ou EN)..."
+              aria-label="Filtrer par tag"
+            />
+            <datalist id="my-list-tag-options">
+              {availableTags.map((tag) => (
+                <option key={tag} value={translateTag(tag)} />
+              ))}
+            </datalist>
+            <button type="button" className="my-list-controls__action" onClick={handleExport}>
+              Exporter
+            </button>
+            <label className="my-list-controls__action my-list-controls__action--file">
+              Importer
+              <input type="file" accept="application/json" onChange={handleImportFile} aria-label="Importer un fichier" />
+            </label>
+          </div>
+
+          <ul className="my-list">
+            {groupedList.map((group) => {
+              if (group.entries.length === 1 && !group.custom) return renderEntry(group.entries[0]);
+
+              const expanded = !!expandedGroups[group.key];
+              const hasFavorite = group.entries.some((entry) => entry.note === 'coup_de_coeur');
+              const customCover = group.custom
+                ? list.find((entry) => entry.animeId === group.custom.coverAnimeId)?.coverImage
+                : null;
+              const cover = customCover ?? group.entries.find((entry) => entry.coverImage)?.coverImage;
+              const title = group.custom ? group.custom.title : group.entries[0].title;
+
+              return (
+                <li key={group.key} className={group.custom ? 'my-list-group my-list-group--custom' : 'my-list-group'}>
+                  <button
+                    type="button"
+                    className="my-list-group__toggle"
+                    aria-expanded={expanded}
+                    onClick={() => toggleGroup(group.key)}
+                  >
+                    {cover && <img src={cover} alt="" className="my-list-item__cover" />}
+                    <span className="my-list-group__title">{title}</span>
+                    <span className="my-list-group__count">{group.entries.length} animes</span>
+                    {hasFavorite && <span className="my-list-group__favorite">Coup de cœur dedans</span>}
+                  </button>
+                  {expanded && (
+                    <ul className="my-list-group__items">{group.entries.map((entry) => renderEntry(entry))}</ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
 
       {pendingImport && (
         <ConflictDialog

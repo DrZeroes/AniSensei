@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ChecklistSection from './ChecklistSection.jsx';
+import { upsertCustomGroup } from '../storage/customGroups.js';
 
 const entries = [
   { animeId: 1, title: 'One Piece' },
@@ -24,6 +25,10 @@ function ControlledChecklist({ selectedIds = [], onToggle = () => {} }) {
 }
 
 describe('ChecklistSection', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('hides the checklist items when expanded is false', () => {
     render(
       <ChecklistSection
@@ -87,12 +92,37 @@ describe('ChecklistSection', () => {
     expect(screen.getByText('Naruto')).toBeInTheDocument();
   });
 
-  it('groups franchise-looking entries into a collapsible sub-block', async () => {
+  it('does not auto-group entries by title, only entries in a custom group made from Ma liste', async () => {
     const franchiseEntries = [
       { animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei' },
       { animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin' },
       { animeId: 3, title: 'Naruto' },
     ];
+
+    render(
+      <ChecklistSection
+        title="Mes animes vus"
+        entries={franchiseEntries}
+        selectedIds={[]}
+        onToggle={() => {}}
+        expanded={true}
+        onToggleExpanded={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.getByText('Kara no Kyoukai: Fukan Fuukei')).toBeInTheDocument();
+    expect(screen.getByText('Kara no Kyoukai: Mirai Fukuin')).toBeInTheDocument();
+    expect(screen.queryByText(/animes$/)).not.toBeInTheDocument();
+  });
+
+  it('groups entries that belong to a custom group into a collapsible sub-block', async () => {
+    const franchiseEntries = [
+      { animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei' },
+      { animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin' },
+      { animeId: 3, title: 'Naruto' },
+    ];
+    upsertCustomGroup({ title: 'Kara no Kyoukai', animeIds: [1, 2] });
     const user = userEvent.setup();
 
     render(

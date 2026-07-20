@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { groupFranchises } from '../utils/groupFranchises.js';
+import { applyCustomGroups } from '../utils/applyCustomGroups.js';
+import { getCustomGroups } from '../storage/customGroups.js';
 
 function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onToggleExpanded }) {
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState({});
 
   const filtered = entries.filter((entry) => entry.title.toLowerCase().includes(search.toLowerCase()));
-  const groups = groupFranchises(filtered);
+  // Only groups entries the user has manually put in a custom group (created
+  // from "Ma liste") — no automatic title-based guessing.
+  const groups = applyCustomGroups(filtered, getCustomGroups());
 
   function toggleGroup(key) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -50,7 +53,7 @@ function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onT
             <p className="checklist__empty">Aucun résultat.</p>
           )}
           {groups.map((group) => {
-            if (group.entries.length === 1) return renderCheckbox(group.entries[0]);
+            if (group.entries.length === 1 && !group.custom) return renderCheckbox(group.entries[0]);
 
             const groupExpanded = !!expandedGroups[group.key];
             const selectedCount = group.entries.filter((entry) => selectedIds.includes(entry.animeId)).length;
@@ -63,7 +66,7 @@ function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onT
                   aria-expanded={groupExpanded}
                   onClick={() => toggleGroup(group.key)}
                 >
-                  <span className="checklist__group-title">{group.entries[0].title}</span>
+                  <span className="checklist__group-title">{group.custom.title}</span>
                   <span className="checklist__group-count">
                     {selectedCount > 0 ? `${selectedCount}/${group.entries.length}` : group.entries.length} animes
                   </span>

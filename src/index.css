@@ -1250,23 +1250,6 @@ button:focus-visible {
   background: var(--bg-elevated-2);
 }
 
-.my-list-group__edit {
-  align-self: flex-start;
-  margin: 0 0.9rem 0.6rem;
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--text-muted);
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.my-list-group__edit:hover {
-  color: var(--accent-2);
-  border-color: var(--accent-2);
-}
-
 .group-form {
   display: flex;
   flex-direction: column;
@@ -1300,24 +1283,90 @@ button:focus-visible {
   padding: 0.5rem;
 }
 
-.group-form__cover {
+.group-form__anime-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.group-form__members {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.5rem;
 }
 
-.group-form__cover-option {
+.group-form__member {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
+.group-form__member-cover {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.group-form__member-title {
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .group-form__actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.my-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.my-groups-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.my-groups-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+
+.my-groups-list__title {
+  flex-grow: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-groups-list__count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.my-groups-list__empty {
+  color: var(--text-muted);
 }
 
 .status-select,

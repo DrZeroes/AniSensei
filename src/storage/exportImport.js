@@ -7,8 +7,8 @@ function isValidEntry(entry) {
   );
 }
 
-export function serializeList(list) {
-  return JSON.stringify(list, null, 2);
+export function serializeList(list, customGroups = []) {
+  return JSON.stringify({ list, customGroups }, null, 2);
 }
 
 export function parseImportedList(jsonString) {
@@ -19,11 +19,17 @@ export function parseImportedList(jsonString) {
     throw new Error('Fichier invalide');
   }
 
-  if (!Array.isArray(parsed) || !parsed.every(isValidEntry)) {
+  // Older exports were a bare array of entries, with no custom groups.
+  if (Array.isArray(parsed)) {
+    if (!parsed.every(isValidEntry)) throw new Error('Fichier invalide');
+    return { list: parsed, customGroups: [] };
+  }
+
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.list) || !parsed.list.every(isValidEntry)) {
     throw new Error('Fichier invalide');
   }
 
-  return parsed;
+  return { list: parsed.list, customGroups: Array.isArray(parsed.customGroups) ? parsed.customGroups : [] };
 }
 
 export function mergeLists(currentList, importedList) {

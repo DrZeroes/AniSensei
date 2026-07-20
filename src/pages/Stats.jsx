@@ -32,15 +32,20 @@ function BreakdownSection({ title, counts, translate = (name) => name }) {
           {counts.length === 0 && (
             <li className="stats-breakdown__empty">Rien à afficher pour l'instant.</li>
           )}
-          {counts.map(([name, count]) => (
-            <li key={name}>
-              <span className="stats-breakdown__label">{translate(name)}</span>
-              <span className="stats-breakdown__bar-wrap">
-                <span className="stats-breakdown__bar" style={{ width: `${(count / max) * 100}%` }} />
-              </span>
-              <span className="stats-breakdown__count">{count}</span>
-            </li>
-          ))}
+          {counts.map(([name, count]) => {
+            const label = translate(name);
+            return (
+              <li key={name}>
+                <span className="stats-breakdown__label" title={label !== name ? name : undefined}>
+                  {label}
+                </span>
+                <span className="stats-breakdown__bar-wrap">
+                  <span className="stats-breakdown__bar" style={{ width: `${(count / max) * 100}%` }} />
+                </span>
+                <span className="stats-breakdown__count">{count}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

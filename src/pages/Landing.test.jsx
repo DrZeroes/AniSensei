@@ -23,7 +23,7 @@ describe('Landing', () => {
 
     expect(screen.getByRole('link', { name: /Conseille-moi/ })).toHaveAttribute('href', '/conseil-moi');
     expect(screen.getByRole('link', { name: /Catalogue/ })).toHaveAttribute('href', '/catalogue');
-    expect(screen.getByRole('link', { name: /Ma liste/ })).toHaveAttribute('href', '/ma-liste');
+    expect(screen.getByRole('link', { name: /Mes animés/ })).toHaveAttribute('href', '/ma-liste');
     expect(screen.getByRole('link', { name: /Mes stats/ })).toHaveAttribute('href', '/stats');
     expect(screen.getByRole('link', { name: /À propos/ })).toHaveAttribute('href', '/apropos');
   });

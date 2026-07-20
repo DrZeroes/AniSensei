@@ -224,7 +224,7 @@ function Catalogue() {
           <legend>Genres</legend>
           <div className="genre-filter__options">
             {availableGenres.map((genre) => (
-              <label key={genre} className="genre-chip">
+              <label key={genre} className="genre-chip" title={genre}>
                 <input
                   type="checkbox"
                   checked={genres.includes(genre)}
@@ -246,6 +246,7 @@ function Catalogue() {
                   className="tag-chip tag-chip--selected"
                   onClick={() => removeTag(tag)}
                   aria-label={`Retirer le tag ${translateTag(tag)}`}
+                  title={tag}
                 >
                   {translateTag(tag)} ×
                 </button>

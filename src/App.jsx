@@ -42,7 +42,7 @@ function App() {
           </NavLink>
           <NavLink to="/conseil-moi">Conseille-moi</NavLink>
           <NavLink to="/catalogue">Catalogue</NavLink>
-          <NavLink to="/ma-liste">Ma liste</NavLink>
+          <NavLink to="/ma-liste">Mes animés</NavLink>
           <NavLink to="/stats">Mes stats</NavLink>
           <NavLink to="/apropos">À propos</NavLink>
           <button

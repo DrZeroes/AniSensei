@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -326,6 +326,29 @@ describe('MyList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
+  });
+
+  it('lets the user drag-and-drop a member to reorder the group', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica' },
+    ]);
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter Puella Magi Madoka Magica au groupe' }));
+
+    const clannadRow = screen.getByText('Clannad').closest('li');
+    const madokaRow = screen.getByText('Puella Magi Madoka Magica').closest('li');
+
+    fireEvent.dragStart(madokaRow);
+    fireEvent.dragOver(clannadRow);
+    fireEvent.drop(clannadRow);
+
+    expect(screen.getByLabelText('Titre du groupe')).toHaveValue('Puella Magi Madoka Magica');
   });
 
   it('allows renaming a custom group and deleting it from "Mes groupes"', async () => {

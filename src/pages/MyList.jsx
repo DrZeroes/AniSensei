@@ -104,6 +104,7 @@ function MyList() {
   const [customGroups, setCustomGroups] = useState(() => getCustomGroups());
   const [groupForm, setGroupForm] = useState(null);
   const [groupFormSearch, setGroupFormSearch] = useState('');
+  const [draggedAnimeId, setDraggedAnimeId] = useState(null);
 
   function toggleGroup(key) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -151,6 +152,28 @@ function MyList() {
       [animeIds[index], animeIds[swapWith]] = [animeIds[swapWith], animeIds[index]];
       return { ...prev, animeIds };
     });
+  }
+
+  function handleMemberDragStart(animeId) {
+    setDraggedAnimeId(animeId);
+  }
+
+  function handleMemberDragOver(event) {
+    event.preventDefault();
+  }
+
+  function handleMemberDrop(targetAnimeId) {
+    setGroupForm((prev) => {
+      if (draggedAnimeId === null || draggedAnimeId === targetAnimeId) return prev;
+      const fromIndex = prev.animeIds.indexOf(draggedAnimeId);
+      const toIndex = prev.animeIds.indexOf(targetAnimeId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const animeIds = [...prev.animeIds];
+      animeIds.splice(fromIndex, 1);
+      animeIds.splice(toIndex, 0, draggedAnimeId);
+      return { ...prev, animeIds };
+    });
+    setDraggedAnimeId(null);
   }
 
   function handleGroupTitleChange(event) {
@@ -435,7 +458,17 @@ function MyList() {
                 : defaultCoverId === animeId;
 
               return (
-                <li key={animeId} className="group-form__member">
+                <li
+                  key={animeId}
+                  className="group-form__member"
+                  draggable
+                  onDragStart={() => handleMemberDragStart(animeId)}
+                  onDragOver={handleMemberDragOver}
+                  onDrop={() => handleMemberDrop(animeId)}
+                >
+                  <span className="group-form__member-handle" aria-hidden="true" title="Glisser pour réordonner">
+                    ⠿
+                  </span>
                   <label className="group-form__member-cover" title="Miniature du groupe">
                     <input
                       type="radio"

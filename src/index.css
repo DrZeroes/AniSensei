@@ -796,8 +796,11 @@ button:focus-visible {
 
 .checklist__group {
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
   margin-top: 0.3rem;
+  margin-bottom: 0.3rem;
 }
 
 .checklist__group-toggle {
@@ -1315,6 +1318,12 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.group-form__member-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .group-form__member-cover {

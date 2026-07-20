@@ -758,6 +758,16 @@ button:focus-visible {
   color: var(--text);
 }
 
+.checklist__toggle--bottom {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.checklist__toggle--bottom::after {
+  content: none;
+}
+
 .checklist__body {
   padding: 0 0.75rem 0.75rem;
   max-height: 220px;

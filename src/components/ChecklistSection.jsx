@@ -77,6 +77,17 @@ function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onT
               </div>
             );
           })}
+          {/* The list above scrolls in its own box, so the top toggle can end up
+              out of view — repeat it at the bottom so collapsing doesn't
+              require scrolling back up first. */}
+          <button
+            type="button"
+            className="checklist__toggle checklist__toggle--bottom"
+            onClick={onToggleExpanded}
+            aria-label={`Réduire ${title}`}
+          >
+            Réduire ▲
+          </button>
         </div>
       )}
     </div>

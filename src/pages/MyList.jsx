@@ -35,6 +35,12 @@ const NOTE_LABELS = {
   pas_aime: '👎 Pas aimé',
 };
 
+const GROUP_FILTER_OPTIONS = [
+  { id: 'tous', label: 'Tous les animes' },
+  { id: 'sans_groupe', label: 'Animes sans groupe' },
+  { id: 'dans_groupe', label: 'Animes dans un groupe' },
+];
+
 const MAIN_TABS = [
   { id: 'liste', label: 'Ma liste' },
   { id: 'groupes', label: 'Mes groupes' },
@@ -92,6 +98,7 @@ function MyList() {
   const [studioFilter, setStudioFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [tagQuery, setTagQuery] = useState('');
+  const [groupFilter, setGroupFilter] = useState('tous');
   const [pendingImport, setPendingImport] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [customGroups, setCustomGroups] = useState(() => getCustomGroups());
@@ -209,6 +216,11 @@ function MyList() {
     if (match) setTagFilter(match);
   }
 
+  const animeIdsInAnyGroup = useMemo(
+    () => new Set(customGroups.flatMap((group) => group.animeIds)),
+    [customGroups]
+  );
+
   const visibleList = useMemo(() => {
     const query = search.trim().toLowerCase();
     const items = list.filter(
@@ -217,14 +229,17 @@ function MyList() {
         (!query || entry.title.toLowerCase().includes(query)) &&
         (!genreFilter || (entry.genres ?? []).includes(genreFilter)) &&
         (!studioFilter || (entry.studios ?? []).includes(studioFilter)) &&
-        (!tagFilter || (entry.tags ?? []).includes(tagFilter))
+        (!tagFilter || (entry.tags ?? []).includes(tagFilter)) &&
+        (groupFilter === 'tous' ||
+          (groupFilter === 'sans_groupe' && !animeIdsInAnyGroup.has(entry.animeId)) ||
+          (groupFilter === 'dans_groupe' && animeIdsInAnyGroup.has(entry.animeId)))
     );
     return [...items].sort((a, b) => {
       const aValue = Array.isArray(a[sortField]) ? a[sortField][0] ?? '' : a[sortField] ?? '';
       const bValue = Array.isArray(b[sortField]) ? b[sortField][0] ?? '' : b[sortField] ?? '';
       return String(aValue).localeCompare(String(bValue));
     });
-  }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter]);
+  }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter, groupFilter, animeIdsInAnyGroup]);
 
   // Groups entries the user has explicitly put together in a custom group
   // (see "Mes groupes") into a single collapsible block — no automatic
@@ -234,10 +249,22 @@ function MyList() {
   const groupFormEntries = useMemo(() => {
     if (!groupForm) return [];
     const query = groupFormSearch.trim().toLowerCase();
-    return list.filter(
-      (entry) => !groupForm.animeIds.includes(entry.animeId) && (!query || entry.title.toLowerCase().includes(query))
+    // Anime already in a *different* custom group aren't offered — an anime
+    // only ever belongs to one group at a time. The group being edited (if
+    // any) doesn't count as "different", so its own members stay available
+    // to remove/re-add while editing.
+    const animeIdsInOtherGroups = new Set(
+      customGroups.filter((group) => group.id !== groupForm.id).flatMap((group) => group.animeIds)
     );
-  }, [groupForm, groupFormSearch, list]);
+    return list
+      .filter(
+        (entry) =>
+          !groupForm.animeIds.includes(entry.animeId) &&
+          !animeIdsInOtherGroups.has(entry.animeId) &&
+          (!query || entry.title.toLowerCase().includes(query))
+      )
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [groupForm, groupFormSearch, list, customGroups]);
 
   // Entries added before tags were tracked have no `tags` field at all (unlike
   // genres/studios, which were always stored) — backfill them from AniList once
@@ -606,6 +633,17 @@ function MyList() {
                 <option key={tag} value={translateTag(tag)} />
               ))}
             </datalist>
+            <select
+              value={groupFilter}
+              onChange={(event) => setGroupFilter(event.target.value)}
+              aria-label="Filtrer par groupe"
+            >
+              {GROUP_FILTER_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button type="button" className="my-list-controls__action" onClick={handleExport}>
               Exporter
             </button>

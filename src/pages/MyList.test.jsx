@@ -274,7 +274,7 @@ describe('MyList', () => {
     expect(screen.getByText('5 Centimeters per Second')).toBeInTheDocument();
     expect(screen.getByText('Clannad')).toBeInTheDocument();
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
-    expect(screen.queryByText(/animes$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ animes$/)).not.toBeInTheDocument();
   });
 
   it('lets the user create a custom group from "Mes groupes", which then collapses in "Ma liste"', async () => {
@@ -356,6 +356,84 @@ describe('MyList', () => {
     await user.click(screen.getByRole('tab', { name: 'Ma liste' }));
     expect(screen.getByText('Clannad')).toBeInTheDocument();
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
+  });
+
+  it('offers anime to add to a group sorted alphabetically', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Zelda Anime' },
+      { ...entry, animeId: 2, title: 'Attack on Titan' },
+      { ...entry, animeId: 3, title: 'Naruto' },
+    ]);
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+
+    const titles = screen.getAllByRole('listitem').filter((item) => item.querySelector('button[aria-label^="Ajouter"]'));
+    expect(titles.map((item) => item.textContent.replace('Ajouter', '').trim())).toEqual([
+      'Attack on Titan',
+      'Naruto',
+      'Zelda Anime',
+    ]);
+  });
+
+  it('does not offer anime that already belong to a different group', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica' },
+      { ...entry, animeId: 3, title: 'Naruto' },
+    ]);
+    upsertCustomGroup({ title: 'Clannad', animeIds: [1] });
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+
+    expect(screen.queryByRole('button', { name: 'Ajouter Clannad au groupe' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter Puella Magi Madoka Magica au groupe' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter Naruto au groupe' })).toBeInTheDocument();
+  });
+
+  it('still offers a group\'s own members when editing it', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica' },
+    ]);
+    upsertCustomGroup({ title: 'Clannad', animeIds: [1] });
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Modifier' }));
+    await user.click(screen.getByRole('button', { name: 'Retirer Clannad du groupe' }));
+
+    // Clannad was just removed from the draft but the group is still being
+    // edited, so it should be re-addable without saving first.
+    expect(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' })).toBeInTheDocument();
+  });
+
+  it('filters "Ma liste" to show only anime without a group, or only those in a group', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad' },
+      { ...entry, animeId: 2, title: 'Naruto' },
+    ]);
+    upsertCustomGroup({ title: 'Clannad', animeIds: [1] });
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par groupe'), 'sans_groupe');
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.queryByText('Clannad')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par groupe'), 'dans_groupe');
+    expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.queryByText('Naruto')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Filtrer par groupe'), 'tous');
+    expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
   });
 
   it('removes an entry when "Supprimer" is clicked', async () => {

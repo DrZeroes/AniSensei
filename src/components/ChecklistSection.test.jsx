@@ -146,6 +146,25 @@ describe('ChecklistSection', () => {
     expect(screen.getByLabelText('Kara no Kyoukai: Mirai Fukuin')).toBeInTheDocument();
   });
 
+  it('also offers a collapse button at the bottom of the expanded list', async () => {
+    const onToggleExpanded = vi.fn();
+    render(
+      <ChecklistSection
+        title="Mes animes vus"
+        entries={entries}
+        selectedIds={[]}
+        onToggle={() => {}}
+        expanded={true}
+        onToggleExpanded={onToggleExpanded}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Réduire Mes animes vus' }));
+
+    expect(onToggleExpanded).toHaveBeenCalledTimes(1);
+  });
+
   it('reflects selectedIds as checked and calls onToggle with the entry', async () => {
     const onToggle = vi.fn();
     const user = userEvent.setup();

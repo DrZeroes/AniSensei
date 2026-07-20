@@ -4,6 +4,7 @@ import ConflictDialog from '../components/ConflictDialog.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
 import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
+import { translateTag } from '../i18n/tagLabels.js';
 import {
   serializeList,
   parseImportedList,
@@ -231,7 +232,7 @@ function MyList() {
           <option value="">Tous les tags</option>
           {availableTags.map((tag) => (
             <option key={tag} value={tag}>
-              {tag}
+              {translateTag(tag)}
             </option>
           ))}
         </select>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { getList } from '../storage/listStorage.js';
 import { computeStats } from '../stats/computeStats.js';
 import { translateGenre } from '../i18n/genreLabels.js';
+import { translateTag } from '../i18n/tagLabels.js';
 
 function StatTile({ label, value }) {
   return (
@@ -71,7 +72,7 @@ function Stats() {
         translate={translateGenre}
       />
       <BreakdownSection title="Voir la répartition par studio" counts={stats.studioCounts} />
-      <BreakdownSection title="Voir le top 20 des tags" counts={stats.tagCounts} />
+      <BreakdownSection title="Voir le top 20 des tags" counts={stats.tagCounts} translate={translateTag} />
     </section>
   );
 }

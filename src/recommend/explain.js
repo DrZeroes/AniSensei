@@ -1,5 +1,6 @@
 import { WEIGHTS } from './scoring.js';
 import { translateGenre } from '../i18n/genreLabels.js';
+import { translateTag } from '../i18n/tagLabels.js';
 
 // Tags are shown in short form, capped to a few — a candidate can share a
 // dozen+ tags with a base anime, and listing them all would swamp the line.
@@ -28,7 +29,7 @@ export function explainMatch(candidate, baseList = []) {
   if (tags.size > 0) {
     const shown = [...tags].slice(0, MAX_TAGS_SHOWN);
     const rest = tags.size - shown.length;
-    parts.push(`tags : ${shown.join(', ')}${rest > 0 ? ` (+${rest})` : ''}`);
+    parts.push(`tags : ${shown.map(translateTag).join(', ')}${rest > 0 ? ` (+${rest})` : ''}`);
   }
 
   return parts.length > 0

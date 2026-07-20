@@ -4,6 +4,7 @@ import AnimeCard from '../components/AnimeCard.jsx';
 import { browseCatalogue, getGenreCollection, getTagCollection } from '../api/queries.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
 import { translateGenre } from '../i18n/genreLabels.js';
+import { translateTag } from '../i18n/tagLabels.js';
 
 const SORT_OPTIONS = [
   { value: 'POPULARITY_DESC', label: 'Popularité' },
@@ -122,12 +123,16 @@ function Catalogue() {
   // match — whether picked from the suggestion list or typed by hand — it's
   // committed immediately, no Enter keypress required.
   function handleTagQueryChange(event) {
-    const value = event.target.value;
-    const match = availableTags.find((tag) => tag.toLowerCase() === value.trim().toLowerCase());
+    const value = event.target.value.trim().toLowerCase();
+    // The suggestion list shows French labels, but the underlying AniList tag
+    // (English) is what's actually stored/filtered on — match against either.
+    const match = availableTags.find(
+      (tag) => translateTag(tag).toLowerCase() === value || tag.toLowerCase() === value
+    );
     if (match) {
       addTag(match);
     } else {
-      setTagQuery(value);
+      setTagQuery(event.target.value);
     }
   }
 
@@ -240,9 +245,9 @@ function Catalogue() {
                   type="button"
                   className="tag-chip tag-chip--selected"
                   onClick={() => removeTag(tag)}
-                  aria-label={`Retirer le tag ${tag}`}
+                  aria-label={`Retirer le tag ${translateTag(tag)}`}
                 >
-                  {tag} ×
+                  {translateTag(tag)} ×
                 </button>
               ))}
             </div>
@@ -259,7 +264,7 @@ function Catalogue() {
             {availableTags
               .filter((tag) => !tags.includes(tag))
               .map((tag) => (
-                <option key={tag} value={tag} />
+                <option key={tag} value={translateTag(tag)} />
               ))}
           </datalist>
         </fieldset>

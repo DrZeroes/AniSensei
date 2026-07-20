@@ -68,7 +68,7 @@ describe('Stats', () => {
     await user.click(screen.getByRole('button', { name: 'Voir le top 20 des tags' }));
 
     const list = screen.getByText('Tsundere').closest('ul');
-    const timeSkipRow = within(list).getByText('Time Skip').closest('li');
+    const timeSkipRow = within(list).getByText('Ellipse temporelle').closest('li'); // "Time Skip", translated
     expect(timeSkipRow).toHaveTextContent('2');
     const tsundereRow = within(list).getByText('Tsundere').closest('li');
     expect(tsundereRow).toHaveTextContent('1');

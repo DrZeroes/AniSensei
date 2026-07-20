@@ -132,8 +132,8 @@ describe('MyList', () => {
     await waitFor(() => expect(getAnimeDetails).toHaveBeenCalledWith(1));
     await waitFor(() => expect(saveList).toHaveBeenCalled());
 
-    // The backfilled tag is now offered as a filter option.
-    expect(screen.getByRole('option', { name: 'Time Skip' })).toBeInTheDocument();
+    // The backfilled tag is now offered as a filter option (shown translated).
+    expect(screen.getByRole('option', { name: 'Ellipse temporelle' })).toBeInTheDocument();
   });
 
   it('does not re-fetch details for entries that already have tags (even an empty list)', async () => {

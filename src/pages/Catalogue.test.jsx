@@ -274,39 +274,58 @@ describe('Catalogue', () => {
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
+    // "Time Skip" has a French translation ("Ellipse temporelle"); "Tsundere" is
+    // kept as an established loanword; "Time Travel" isn't a real AniList tag
+    // (test fixture only) so it has no translation entry and falls back as-is.
     const datalist = document.getElementById('tag-options');
     expect([...datalist.options].map((option) => option.value)).toEqual([
-      'Time Skip',
+      'Ellipse temporelle',
       'Tsundere',
       'Time Travel',
     ]);
   });
 
-  it('commits a tag as soon as it becomes an exact match, with no Enter keypress needed', async () => {
+  it('commits a tag as soon as it becomes an exact match (translated or original), with no Enter keypress needed', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
 
     renderCatalogue();
     await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
 
-    // Simulates picking "Time Skip" from the native datalist suggestions (which
-    // fills the input the same way typing it by hand would) — no {Enter} here.
+    // Simulates picking "Ellipse temporelle" from the native datalist
+    // suggestions (which fills the input the same way typing it by hand
+    // would) — no {Enter} here. The underlying stored/filtered value stays
+    // the original English AniList tag name.
     const tagInput = screen.getByLabelText('Ajouter un tag');
-    await user.type(tagInput, 'Time Skip');
+    await user.type(tagInput, 'Ellipse temporelle');
 
     expect(tagInput).toHaveValue('');
-    expect(screen.getByRole('button', { name: 'Retirer le tag Time Skip' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retirer le tag Ellipse temporelle' })).toBeInTheDocument();
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['Time Skip'] }))
     );
 
     // The datalist no longer offers an already-selected tag.
     const datalist = document.getElementById('tag-options');
-    expect([...datalist.options].map((option) => option.value)).not.toContain('Time Skip');
+    expect([...datalist.options].map((option) => option.value)).not.toContain('Ellipse temporelle');
 
-    await user.click(screen.getByRole('button', { name: 'Retirer le tag Time Skip' }));
+    await user.click(screen.getByRole('button', { name: 'Retirer le tag Ellipse temporelle' }));
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] }))
+    );
+  });
+
+  it('also commits a tag when the original English name is typed directly', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+
+    await user.type(screen.getByLabelText('Ajouter un tag'), 'Time Skip');
+
+    await waitFor(() =>
+      expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['Time Skip'] }))
     );
   });
 

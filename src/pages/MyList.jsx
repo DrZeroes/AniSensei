@@ -5,6 +5,7 @@ import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStor
 import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
+import { groupFranchises } from './groupFranchises.js';
 import {
   serializeList,
   parseImportedList,
@@ -75,6 +76,11 @@ function MyList() {
   const [studioFilter, setStudioFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [pendingImport, setPendingImport] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  function toggleGroup(key) {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   // Options are drawn from what's actually in the list, not the full AniList
   // catalogue — no point offering a genre/studio/tag nothing here has.
@@ -98,6 +104,11 @@ function MyList() {
       return String(aValue).localeCompare(String(bValue));
     });
   }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter]);
+
+  // Groups consecutive-in-sort entries that look like the same franchise (e.g.
+  // several chapters/seasons of one series) into a single collapsible block,
+  // so a long-running series doesn't dominate the list with one row each.
+  const groupedList = useMemo(() => groupFranchises(visibleList), [visibleList]);
 
   // Entries added before tags were tracked have no `tags` field at all (unlike
   // genres/studios, which were always stored) — backfill them from AniList once
@@ -137,6 +148,64 @@ function MyList() {
 
   function handleRemove(animeId) {
     setList(removeAnime(animeId));
+  }
+
+  function renderEntry(entry) {
+    return (
+      <li key={entry.animeId} className="my-list-item">
+        {entry.coverImage && <img src={entry.coverImage} alt="" className="my-list-item__cover" />}
+        <div className="my-list-item__content">
+          <button
+            type="button"
+            className="my-list-item__title"
+            onClick={() => navigate(`/anime/${entry.animeId}`)}
+          >
+            {entry.title}
+          </button>
+          <div className="my-list-item__fields">
+            <select
+              className={`status-select status-select--${entry.status}`}
+              value={entry.status}
+              aria-label={`Statut de ${entry.title}`}
+              onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {STATUS_LABELS[option]}
+                </option>
+              ))}
+            </select>
+            <select
+              className={`note-select note-select--${entry.note ?? 'none'}`}
+              value={entry.note ?? ''}
+              aria-label={`Note de ${entry.title}`}
+              onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
+            >
+              <option value="">{NOTE_LABELS['']}</option>
+              {NOTE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {NOTE_LABELS[option]}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={entry.comment}
+              aria-label={`Commentaire pour ${entry.title}`}
+              onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
+            />
+            {entry.excluded && (
+              <button type="button" onClick={() => updateEntry(entry.animeId, { excluded: false })}>
+                Retirer de la liste des exclus
+              </button>
+            )}
+            <button type="button" onClick={() => handleRemove(entry.animeId)}>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </li>
+    );
   }
 
   function handleExport() {
@@ -246,61 +315,32 @@ function MyList() {
       </div>
 
       <ul className="my-list">
-        {visibleList.map((entry) => (
-          <li key={entry.animeId} className="my-list-item">
-            {entry.coverImage && <img src={entry.coverImage} alt="" className="my-list-item__cover" />}
-            <div className="my-list-item__content">
+        {groupedList.map((group) => {
+          if (group.entries.length === 1) return renderEntry(group.entries[0]);
+
+          const expanded = !!expandedGroups[group.key];
+          const hasFavorite = group.entries.some((entry) => entry.note === 'coup_de_coeur');
+          const cover = group.entries.find((entry) => entry.coverImage)?.coverImage;
+
+          return (
+            <li key={group.key} className="my-list-group">
               <button
                 type="button"
-                className="my-list-item__title"
-                onClick={() => navigate(`/anime/${entry.animeId}`)}
+                className="my-list-group__toggle"
+                aria-expanded={expanded}
+                onClick={() => toggleGroup(group.key)}
               >
-                {entry.title}
+                {cover && <img src={cover} alt="" className="my-list-item__cover" />}
+                <span className="my-list-group__title">{group.entries[0].title}</span>
+                <span className="my-list-group__count">{group.entries.length} animes</span>
+                {hasFavorite && <span className="my-list-group__favorite">Coup de cœur dedans</span>}
               </button>
-              <div className="my-list-item__fields">
-                <select
-                  className={`status-select status-select--${entry.status}`}
-                  value={entry.status}
-                  aria-label={`Statut de ${entry.title}`}
-                  onChange={(event) => updateEntry(entry.animeId, { status: event.target.value })}
-                >
-                  {STATUS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {STATUS_LABELS[option]}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={`note-select note-select--${entry.note ?? 'none'}`}
-                  value={entry.note ?? ''}
-                  aria-label={`Note de ${entry.title}`}
-                  onChange={(event) => updateEntry(entry.animeId, { note: event.target.value || null })}
-                >
-                  <option value="">{NOTE_LABELS['']}</option>
-                  {NOTE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {NOTE_LABELS[option]}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={entry.comment}
-                  aria-label={`Commentaire pour ${entry.title}`}
-                  onChange={(event) => updateEntry(entry.animeId, { comment: event.target.value })}
-                />
-                {entry.excluded && (
-                  <button type="button" onClick={() => updateEntry(entry.animeId, { excluded: false })}>
-                    Retirer de la liste des exclus
-                  </button>
-                )}
-                <button type="button" onClick={() => handleRemove(entry.animeId)}>
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          </li>
-        ))}
+              {expanded && (
+                <ul className="my-list-group__items">{group.entries.map((entry) => renderEntry(entry))}</ul>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {pendingImport && (

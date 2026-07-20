@@ -207,6 +207,40 @@ describe('MyList', () => {
     expect(titles.map((button) => button.textContent)).toEqual(['Attack on Titan', 'One Piece', 'Zelda Anime']);
   });
 
+  it('groups anime that look like the same franchise into one collapsible block', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei', note: null },
+      { ...entry, animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin', note: null },
+      { ...entry, animeId: 3, title: 'Naruto', note: null },
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+
+    // Collapsed by default: only the group header and the unrelated single
+    // entry show up, not the individual franchise entries' controls.
+    expect(screen.getByText('2 animes')).toBeInTheDocument();
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kara no Kyoukai: Fukan Fuukei' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Statut de Kara no Kyoukai: Fukan Fuukei')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /2 animes/ }));
+
+    expect(screen.getByRole('button', { name: 'Kara no Kyoukai: Fukan Fuukei' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kara no Kyoukai: Mirai Fukuin' })).toBeInTheDocument();
+  });
+
+  it('flags a franchise group that contains a "coup de cœur" entry', () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei', note: 'coup_de_coeur' },
+      { ...entry, animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin', note: null },
+    ]);
+
+    renderMyList();
+
+    expect(screen.getByText('Coup de cœur dedans')).toBeInTheDocument();
+  });
+
   it('removes an entry when "Supprimer" is clicked', async () => {
     const user = userEvent.setup();
     renderMyList();

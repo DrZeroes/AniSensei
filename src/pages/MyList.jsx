@@ -6,6 +6,7 @@ import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
 import { groupFranchises } from '../utils/groupFranchises.js';
+import { getCustomGroups, upsertCustomGroup, removeCustomGroup } from '../storage/customGroups.js';
 import {
   serializeList,
   parseImportedList,
@@ -66,6 +67,41 @@ function uniqueSorted(values) {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 
+// The earliest entry (by season year) among the given ids is used as the
+// default group title/thumbnail proposal — a reasonable guess at "the first
+// work of the saga" — but the user can always override both.
+function computeDefaultMember(animeIds, list) {
+  const members = list.filter((entry) => animeIds.includes(entry.animeId));
+  if (members.length === 0) return null;
+  return [...members].sort((a, b) => (a.seasonYear ?? Infinity) - (b.seasonYear ?? Infinity))[0];
+}
+
+// Merges user-defined groups with the automatic franchise-key grouping:
+// entries that belong to a custom group are pulled out of the automatic
+// grouping entirely so they only appear once, under the custom group.
+function buildGroupedList(visibleList, customGroups) {
+  const customByAnimeId = new Map();
+  for (const group of customGroups) {
+    for (const animeId of group.animeIds) customByAnimeId.set(animeId, group);
+  }
+
+  const autoEntries = visibleList.filter((entry) => !customByAnimeId.has(entry.animeId));
+  const autoGroups = groupFranchises(autoEntries).map((group) => ({ ...group, custom: null }));
+
+  const seenGroupIds = new Set();
+  const customBlocks = [];
+  for (const entry of visibleList) {
+    const group = customByAnimeId.get(entry.animeId);
+    if (!group || seenGroupIds.has(group.id)) continue;
+    seenGroupIds.add(group.id);
+    const members = visibleList.filter((item) => group.animeIds.includes(item.animeId));
+    customBlocks.push({ key: `custom-${group.id}`, entries: members, custom: group });
+  }
+
+  const firstIndex = (block) => visibleList.findIndex((entry) => entry.animeId === block.entries[0].animeId);
+  return [...autoGroups, ...customBlocks].sort((a, b) => firstIndex(a) - firstIndex(b));
+}
+
 function MyList() {
   const navigate = useNavigate();
   const [list, setList] = useState(() => getList());
@@ -79,9 +115,68 @@ function MyList() {
   const [tagQuery, setTagQuery] = useState('');
   const [pendingImport, setPendingImport] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [customGroups, setCustomGroups] = useState(() => getCustomGroups());
+  const [groupForm, setGroupForm] = useState(null);
+  const [groupFormSearch, setGroupFormSearch] = useState('');
 
   function toggleGroup(key) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function openCreateGroupForm() {
+    setGroupForm({ id: null, animeIds: [], title: '', titleTouched: false, coverAnimeId: null, coverTouched: false });
+    setGroupFormSearch('');
+  }
+
+  function openEditGroupForm(group) {
+    setGroupForm({
+      id: group.id,
+      animeIds: [...group.animeIds],
+      title: group.title,
+      titleTouched: true,
+      coverAnimeId: group.coverAnimeId,
+      coverTouched: true,
+    });
+    setGroupFormSearch('');
+  }
+
+  function closeGroupForm() {
+    setGroupForm(null);
+  }
+
+  function toggleAnimeInGroupForm(animeId) {
+    setGroupForm((prev) => ({
+      ...prev,
+      animeIds: prev.animeIds.includes(animeId)
+        ? prev.animeIds.filter((id) => id !== animeId)
+        : [...prev.animeIds, animeId],
+    }));
+  }
+
+  function handleGroupTitleChange(event) {
+    setGroupForm((prev) => ({ ...prev, title: event.target.value, titleTouched: true }));
+  }
+
+  function handleGroupCoverChange(animeId) {
+    setGroupForm((prev) => ({ ...prev, coverAnimeId: animeId, coverTouched: true }));
+  }
+
+  function handleSaveGroup() {
+    if (groupForm.animeIds.length === 0) return;
+    const defaultMember = computeDefaultMember(groupForm.animeIds, list);
+    const title = (groupForm.titleTouched ? groupForm.title.trim() : '') || defaultMember?.title || '';
+    const coverAnimeId =
+      groupForm.coverTouched && groupForm.animeIds.includes(groupForm.coverAnimeId)
+        ? groupForm.coverAnimeId
+        : defaultMember?.animeId ?? null;
+    const updated = upsertCustomGroup({ id: groupForm.id, title, animeIds: groupForm.animeIds, coverAnimeId });
+    setCustomGroups(updated);
+    setGroupForm(null);
+  }
+
+  function handleDeleteGroup(id) {
+    setCustomGroups(removeCustomGroup(id));
+    if (groupForm?.id === id) setGroupForm(null);
   }
 
   // Options are drawn from what's actually in the list, not the full AniList
@@ -138,10 +233,18 @@ function MyList() {
     });
   }, [list, activeTab, search, sortField, genreFilter, studioFilter, tagFilter]);
 
-  // Groups consecutive-in-sort entries that look like the same franchise (e.g.
-  // several chapters/seasons of one series) into a single collapsible block,
-  // so a long-running series doesn't dominate the list with one row each.
-  const groupedList = useMemo(() => groupFranchises(visibleList), [visibleList]);
+  // Groups entries that look like the same franchise (e.g. several
+  // chapters/seasons of one series) into a single collapsible block, so a
+  // long-running series doesn't dominate the list with one row each. User-
+  // defined groups (see the group form below) take priority over the
+  // automatic guess.
+  const groupedList = useMemo(() => buildGroupedList(visibleList, customGroups), [visibleList, customGroups]);
+
+  const groupFormEntries = useMemo(() => {
+    if (!groupForm) return [];
+    const query = groupFormSearch.trim().toLowerCase();
+    return list.filter((entry) => !query || entry.title.toLowerCase().includes(query));
+  }, [groupForm, groupFormSearch, list]);
 
   // Entries added before tags were tracked have no `tags` field at all (unlike
   // genres/studios, which were always stored) — backfill them from AniList once
@@ -355,18 +458,100 @@ function MyList() {
           Importer
           <input type="file" accept="application/json" onChange={handleImportFile} aria-label="Importer un fichier" />
         </label>
+        <button type="button" className="my-list-controls__action" onClick={openCreateGroupForm}>
+          Créer un groupe
+        </button>
       </div>
+
+      {groupForm && (
+        <div className="group-form" role="dialog" aria-label={groupForm.id ? 'Modifier le groupe' : 'Créer un groupe'}>
+          <h3>{groupForm.id ? 'Modifier le groupe' : 'Créer un groupe personnalisé'}</h3>
+          <label className="group-form__field">
+            Titre du groupe
+            <input
+              type="text"
+              value={
+                groupForm.titleTouched ? groupForm.title : computeDefaultMember(groupForm.animeIds, list)?.title ?? ''
+              }
+              onChange={handleGroupTitleChange}
+              aria-label="Titre du groupe"
+            />
+          </label>
+          <input
+            type="text"
+            value={groupFormSearch}
+            onChange={(event) => setGroupFormSearch(event.target.value)}
+            placeholder="Rechercher un anime à ajouter..."
+            aria-label="Rechercher un anime à ajouter au groupe"
+          />
+          <ul className="group-form__anime-list">
+            {groupFormEntries.map((entry) => (
+              <li key={entry.animeId}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={groupForm.animeIds.includes(entry.animeId)}
+                    onChange={() => toggleAnimeInGroupForm(entry.animeId)}
+                  />
+                  {entry.title}
+                </label>
+              </li>
+            ))}
+          </ul>
+          {groupForm.animeIds.length > 0 && (
+            <fieldset className="group-form__cover">
+              <legend>Miniature du groupe</legend>
+              {groupForm.animeIds.map((animeId) => {
+                const member = list.find((entry) => entry.animeId === animeId);
+                if (!member) return null;
+                const defaultCoverId = computeDefaultMember(groupForm.animeIds, list)?.animeId;
+                const isChecked = groupForm.coverTouched ? groupForm.coverAnimeId === animeId : defaultCoverId === animeId;
+
+                return (
+                  <label key={animeId} className="group-form__cover-option">
+                    <input
+                      type="radio"
+                      name="group-cover"
+                      checked={isChecked}
+                      onChange={() => handleGroupCoverChange(animeId)}
+                    />
+                    {member.coverImage && <img src={member.coverImage} alt="" className="my-list-item__cover" />}
+                    {member.title}
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
+          <div className="group-form__actions">
+            <button type="button" onClick={handleSaveGroup} disabled={groupForm.animeIds.length === 0}>
+              Enregistrer
+            </button>
+            <button type="button" onClick={closeGroupForm}>
+              Annuler
+            </button>
+            {groupForm.id && (
+              <button type="button" onClick={() => handleDeleteGroup(groupForm.id)}>
+                Supprimer le groupe
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <ul className="my-list">
         {groupedList.map((group) => {
-          if (group.entries.length === 1) return renderEntry(group.entries[0]);
+          if (group.entries.length === 1 && !group.custom) return renderEntry(group.entries[0]);
 
           const expanded = !!expandedGroups[group.key];
           const hasFavorite = group.entries.some((entry) => entry.note === 'coup_de_coeur');
-          const cover = group.entries.find((entry) => entry.coverImage)?.coverImage;
+          const customCover = group.custom
+            ? list.find((entry) => entry.animeId === group.custom.coverAnimeId)?.coverImage
+            : null;
+          const cover = customCover ?? group.entries.find((entry) => entry.coverImage)?.coverImage;
+          const title = group.custom ? group.custom.title : group.entries[0].title;
 
           return (
-            <li key={group.key} className="my-list-group">
+            <li key={group.key} className={group.custom ? 'my-list-group my-list-group--custom' : 'my-list-group'}>
               <button
                 type="button"
                 className="my-list-group__toggle"
@@ -374,10 +559,19 @@ function MyList() {
                 onClick={() => toggleGroup(group.key)}
               >
                 {cover && <img src={cover} alt="" className="my-list-item__cover" />}
-                <span className="my-list-group__title">{group.entries[0].title}</span>
+                <span className="my-list-group__title">{title}</span>
                 <span className="my-list-group__count">{group.entries.length} animes</span>
                 {hasFavorite && <span className="my-list-group__favorite">Coup de cœur dedans</span>}
               </button>
+              {group.custom && (
+                <button
+                  type="button"
+                  className="my-list-group__edit"
+                  onClick={() => openEditGroupForm(group.custom)}
+                >
+                  Modifier le groupe
+                </button>
+              )}
               {expanded && (
                 <ul className="my-list-group__items">{group.entries.map((entry) => renderEntry(entry))}</ul>
               )}

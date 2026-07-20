@@ -45,6 +45,8 @@ describe('MyList', () => {
     upsertAnime.mockReset();
     removeAnime.mockReset().mockReturnValue([]);
     getAnimeDetails.mockReset();
+    // Custom groups are real localStorage (not mocked), so clear between tests.
+    localStorage.clear();
   });
 
   it('renders entries from the stored list', () => {
@@ -255,6 +257,72 @@ describe('MyList', () => {
     renderMyList();
 
     expect(screen.getByText('Coup de cœur dedans')).toBeInTheDocument();
+  });
+
+  it('does not auto-group unrelated titles that merely share a common word', () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: '5 Centimeters per Second' },
+      { ...entry, animeId: 2, title: 'Clannad' },
+      { ...entry, animeId: 3, title: 'Puella Magi Madoka Magica' },
+    ]);
+
+    renderMyList();
+
+    expect(screen.getByText('5 Centimeters per Second')).toBeInTheDocument();
+    expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
+    expect(screen.queryByText(/animes$/)).not.toBeInTheDocument();
+  });
+
+  it('lets the user manually group unrelated titles into a named block with a chosen thumbnail', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad', seasonYear: 2007, coverImage: 'clannad.jpg' },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica', seasonYear: 2011, coverImage: 'madoka.jpg' },
+    ]);
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    await user.click(screen.getByLabelText('Clannad'));
+    await user.click(screen.getByLabelText('Puella Magi Madoka Magica'));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    // Default proposed title is the earliest (by season year) selected title.
+    expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.getByText('2 animes')).toBeInTheDocument();
+    expect(screen.queryByText('Puella Magi Madoka Magica')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /2 animes/ }));
+    expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
+  });
+
+  it('allows renaming a custom group and deleting it', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'Clannad', seasonYear: 2007 },
+      { ...entry, animeId: 2, title: 'Puella Magi Madoka Magica', seasonYear: 2011 },
+    ]);
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    await user.click(screen.getByLabelText('Clannad'));
+    await user.click(screen.getByLabelText('Puella Magi Madoka Magica'));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le groupe' }));
+    const titleInput = screen.getByLabelText('Titre du groupe');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Mes tranches de vie tristes');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(screen.getByText('Mes tranches de vie tristes')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Modifier le groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer le groupe' }));
+
+    expect(screen.queryByText('Mes tranches de vie tristes')).not.toBeInTheDocument();
+    expect(screen.getByText('Clannad')).toBeInTheDocument();
+    expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
   });
 
   it('removes an entry when "Supprimer" is clicked', async () => {

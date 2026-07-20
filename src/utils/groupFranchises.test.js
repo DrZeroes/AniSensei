@@ -1,56 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import { groupFranchises } from './groupFranchises.js';
+import { franchiseKey, groupFranchises } from './groupFranchises.js';
 
-function ids(group) {
-  return group.entries.map((entry) => entry.animeId).sort((a, b) => a - b);
-}
+describe('franchiseKey', () => {
+  it('strips a colon-separated subtitle', () => {
+    expect(franchiseKey('Kara no Kyoukai: Fukan Fuukei')).toBe('kara no kyoukai');
+    expect(franchiseKey('Kara no Kyoukai: Mirai Fukuin')).toBe('kara no kyoukai');
+  });
+
+  it('strips "Season N" and "Nth Season" suffixes', () => {
+    expect(franchiseKey('Attack on Titan Season 2')).toBe('attack on titan');
+    expect(franchiseKey('Boku no Hero Academia 2nd Season')).toBe('boku no hero academia');
+  });
+
+  it('strips roman numeral suffixes', () => {
+    expect(franchiseKey('Fate/kaleid liner Prisma Illya II')).toBe('fate/kaleid liner prisma illya');
+  });
+
+  it('leaves an unrelated title untouched', () => {
+    expect(franchiseKey('One Piece')).toBe('one piece');
+  });
+
+  it('falls back to the full title when stripping would leave something too short', () => {
+    expect(franchiseKey('K: Season 2')).toBe('k: season 2');
+  });
+});
 
 describe('groupFranchises', () => {
-  it('groups Berserk entries despite year/number/subtitle differences', () => {
+  it('groups entries that share a franchise key, preserving first-seen order', () => {
     const entries = [
-      { animeId: 1, title: 'Berserk (2016)' },
-      { animeId: 2, title: 'BERSERK 2' },
-      { animeId: 3, title: 'Berserk: The Golden Age Arc I - Egg of the King' },
+      { animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei' },
+      { animeId: 2, title: 'One Piece' },
+      { animeId: 3, title: 'Kara no Kyoukai: Mirai Fukuin' },
     ];
 
     const groups = groupFranchises(entries);
 
-    expect(groups).toHaveLength(1);
-    expect(ids(groups[0])).toEqual([1, 2, 3]);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].entries.map((e) => e.animeId)).toEqual([1, 3]);
+    expect(groups[1].entries.map((e) => e.animeId)).toEqual([2]);
   });
 
-  it('groups the whole "When They Cry" family transitively, including Umineko', () => {
-    const entries = [
-      { animeId: 1, title: 'Higurashi When They Cry GOU' },
-      { animeId: 2, title: 'When They Cry' },
-      { animeId: 3, title: 'When They Cry Kai' },
-      { animeId: 4, title: 'When They Cry Rei' },
-      { animeId: 5, title: 'Umineko When They Cry' },
-    ];
-
-    const groups = groupFranchises(entries);
-
-    expect(groups).toHaveLength(1);
-    expect(ids(groups[0])).toEqual([1, 2, 3, 4, 5]);
-  });
-
-  it('groups Fate entries on the shared "Fate" token alone', () => {
+  it('keeps unrelated titles in their own single-entry group', () => {
     const entries = [
       { animeId: 1, title: 'Fate/stay night' },
       { animeId: 2, title: 'Fate/Zero' },
-      { animeId: 3, title: 'Fate/kaleid liner Prisma Illya' },
-    ];
-
-    const groups = groupFranchises(entries);
-
-    expect(groups).toHaveLength(1);
-    expect(ids(groups[0])).toEqual([1, 2, 3]);
-  });
-
-  it('does not group unrelated titles that merely share one short, common word', () => {
-    const entries = [
-      { animeId: 1, title: 'One Piece' },
-      { animeId: 2, title: 'One Punch Man' },
     ];
 
     const groups = groupFranchises(entries);
@@ -59,17 +52,17 @@ describe('groupFranchises', () => {
     expect(groups.every((group) => group.entries.length === 1)).toBe(true);
   });
 
-  it('keeps a fully unrelated title on its own', () => {
+  it('does not chain unrelated titles through an unrelated group', () => {
     const entries = [
-      { animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei' },
-      { animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin' },
-      { animeId: 3, title: 'Naruto' },
+      { animeId: 1, title: '5 Centimeters per Second' },
+      { animeId: 2, title: 'Clannad' },
+      { animeId: 3, title: 'Puella Magi Madoka Magica' },
+      { animeId: 4, title: 'Spy x Family' },
     ];
 
     const groups = groupFranchises(entries);
 
-    expect(groups).toHaveLength(2);
-    const naruto = groups.find((group) => group.entries.length === 1);
-    expect(naruto.entries[0].animeId).toBe(3);
+    expect(groups).toHaveLength(4);
+    expect(groups.every((group) => group.entries.length === 1)).toBe(true);
   });
 });

@@ -1246,6 +1246,80 @@ button:focus-visible {
   gap: 0.75rem;
 }
 
+.my-list-group--custom .my-list-group__toggle {
+  background: var(--bg-elevated-2);
+}
+
+.my-list-group__edit {
+  align-self: flex-start;
+  margin: 0 0.9rem 0.6rem;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.my-list-group__edit:hover {
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.group-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.group-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.group-form__anime-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.group-form__cover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.group-form__cover-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.group-form__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .status-select,
 .note-select {
   font-weight: 600;

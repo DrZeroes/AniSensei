@@ -13,6 +13,12 @@ const SORT_OPTIONS = [
 ];
 
 const SEARCH_DEBOUNCE_MS = 300;
+// If everything popular has already been marked "vu"/excluded, a single page
+// could come back almost entirely hidden — keep pulling more pages until
+// there's a decent number of visible results, capped so this can't spiral
+// into dozens of requests for someone who's marked nearly everything.
+const MIN_VISIBLE_PER_LOAD = 10;
+const MAX_PAGES_PER_LOAD = 5;
 
 function Catalogue() {
   const navigate = useNavigate();
@@ -34,22 +40,48 @@ function Catalogue() {
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const requestIdRef = useRef(0);
 
+  function getHiddenIds() {
+    const list = getList();
+    return {
+      seenIds: new Set(list.filter((entry) => entry.status === 'vu').map((entry) => entry.animeId)),
+      excludedIds: new Set(list.filter((entry) => entry.excluded).map((entry) => entry.animeId)),
+    };
+  }
+
   async function loadPage(targetPage, replace) {
     const requestId = ++requestIdRef.current;
     setStatus('loading');
     try {
-      const result = await browseCatalogue({
-        page: targetPage,
-        search: debouncedSearch,
-        genres,
-        tags,
-        year: year ? Number(year) : null,
-        sort: [sort],
-      });
-      if (requestIdRef.current !== requestId) return; // a newer request has since been issued; discard this stale response
-      setMedia((prev) => (replace ? result.media : [...prev, ...result.media]));
-      setHasNextPage(result.hasNextPage);
-      setStatus(result.media.length === 0 && replace ? 'empty' : 'idle');
+      const { seenIds, excludedIds } = getHiddenIds();
+      const isHidden = (anime) =>
+        (!includeSeen && seenIds.has(anime.id)) || (!includeExcluded && excludedIds.has(anime.id));
+
+      let currentPage = targetPage;
+      let fetchedMedia = [];
+      let hasMore = false;
+
+      for (let attempt = 0; attempt < MAX_PAGES_PER_LOAD; attempt += 1) {
+        const result = await browseCatalogue({
+          page: currentPage,
+          search: debouncedSearch,
+          genres,
+          tags,
+          year: year ? Number(year) : null,
+          sort: [sort],
+        });
+        if (requestIdRef.current !== requestId) return; // a newer request has since been issued; discard this stale response
+        fetchedMedia = [...fetchedMedia, ...result.media];
+        hasMore = result.hasNextPage;
+
+        const visibleCount = fetchedMedia.filter((anime) => !isHidden(anime)).length;
+        if (visibleCount >= MIN_VISIBLE_PER_LOAD || !hasMore) break;
+        currentPage += 1;
+      }
+
+      setPage(currentPage);
+      setMedia((prev) => (replace ? fetchedMedia : [...prev, ...fetchedMedia]));
+      setHasNextPage(hasMore);
+      setStatus(fetchedMedia.length === 0 && replace ? 'empty' : 'idle');
     } catch {
       if (requestIdRef.current !== requestId) return;
       setStatus('error');
@@ -133,8 +165,7 @@ function Catalogue() {
 
   // Hidden by default so the catalogue surfaces things you haven't seen (or
   // explicitly don't want recommended) yet; each checkbox opts back in.
-  const seenIds = new Set(localList.filter((entry) => entry.status === 'vu').map((entry) => entry.animeId));
-  const excludedIds = new Set(localList.filter((entry) => entry.excluded).map((entry) => entry.animeId));
+  const { seenIds, excludedIds } = getHiddenIds();
   const visibleMedia = media.filter((anime) => {
     if (!includeSeen && seenIds.has(anime.id)) return false;
     if (!includeExcluded && excludedIds.has(anime.id)) return false;

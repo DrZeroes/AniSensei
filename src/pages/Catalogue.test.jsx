@@ -16,6 +16,18 @@ vi.mock('../storage/listStorage.js', () => ({
   upsertAnime: vi.fn(),
 }));
 
+// A page with enough visible (non-hidden) results that the auto-pagination
+// (which keeps fetching until MIN_VISIBLE_PER_LOAD are visible) stops after a
+// single fetch — the same shape a real "page" of popular anime would have.
+function fullPage(idOffset = 0) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: idOffset + i,
+    title: `Filler ${idOffset + i}`,
+    genres: [],
+    studios: [],
+  }));
+}
+
 function renderCatalogue() {
   return render(
     <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -36,13 +48,28 @@ describe('Catalogue', () => {
   it('loads and displays the first page on mount', async () => {
     browseCatalogue.mockResolvedValue({
       media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
-      hasNextPage: true,
+      hasNextPage: false,
     });
 
     renderCatalogue();
 
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
     expect(browseCatalogue).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+  });
+
+  it('auto-fetches more pages when too few results are visible, without waiting for "Charger plus"', async () => {
+    // Everything on page 1 is hidden (already "vu"), so a single page alone
+    // would show nothing — it should keep pulling pages until enough surface.
+    getList.mockReturnValue(fullPage(1).map((anime) => ({ animeId: anime.id, status: 'vu' })));
+    browseCatalogue
+      .mockResolvedValueOnce({ media: fullPage(1), hasNextPage: true })
+      .mockResolvedValueOnce({ media: [{ id: 999, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
+
+    renderCatalogue();
+
+    await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
+    expect(browseCatalogue).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Filler 1')).not.toBeInTheDocument();
   });
 
   it('hides anime already marked "vu" by default, showing them once the checkbox is checked', async () => {
@@ -161,17 +188,19 @@ describe('Catalogue', () => {
   });
 
   it('appends the next page when "Charger plus" is clicked', async () => {
+    // Page 1 alone already clears MIN_VISIBLE_PER_LOAD, so the auto-pagination
+    // stops there and "Charger plus" is a genuine user-triggered next fetch.
     browseCatalogue
-      .mockResolvedValueOnce({ media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }], hasNextPage: true })
-      .mockResolvedValueOnce({ media: [{ id: 2, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
+      .mockResolvedValueOnce({ media: fullPage(1), hasNextPage: true })
+      .mockResolvedValueOnce({ media: [{ id: 999, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
     const user = userEvent.setup();
 
     renderCatalogue();
-    await waitFor(() => screen.getByText('One Piece'));
+    await waitFor(() => screen.getByText('Filler 1'));
     await user.click(screen.getByRole('button', { name: 'Charger plus' }));
 
     await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
-    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByText('Filler 1')).toBeInTheDocument();
   });
 
   it('shows an empty state when no anime match the filters', async () => {
@@ -359,12 +388,12 @@ describe('Catalogue', () => {
       resolveSecondPage = resolve;
     });
     browseCatalogue
-      .mockResolvedValueOnce({ media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }], hasNextPage: true })
+      .mockResolvedValueOnce({ media: fullPage(1), hasNextPage: true })
       .mockImplementationOnce(() => secondPagePromise);
     const user = userEvent.setup();
 
     renderCatalogue();
-    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Filler 1')).toBeInTheDocument());
 
     const loadMoreButton = screen.getByRole('button', { name: 'Charger plus' });
     await user.click(loadMoreButton);
@@ -372,7 +401,7 @@ describe('Catalogue', () => {
     expect(loadMoreButton).toBeDisabled();
     await user.click(loadMoreButton);
 
-    resolveSecondPage({ media: [{ id: 2, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
+    resolveSecondPage({ media: [{ id: 999, title: 'Naruto', genres: [], studios: [] }], hasNextPage: false });
     await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
 
     expect(browseCatalogue).toHaveBeenCalledTimes(2);

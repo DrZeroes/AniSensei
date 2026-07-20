@@ -244,6 +244,11 @@ function MyList() {
     [customGroups]
   );
 
+  const sortedCustomGroups = useMemo(
+    () => [...customGroups].sort((a, b) => a.title.localeCompare(b.title)),
+    [customGroups]
+  );
+
   const visibleList = useMemo(() => {
     const query = search.trim().toLowerCase();
     const items = list.filter(
@@ -576,10 +581,10 @@ function MyList() {
           {groupForm && renderGroupForm()}
 
           <ul className="my-groups-list">
-            {customGroups.length === 0 && (
+            {sortedCustomGroups.length === 0 && (
               <li className="my-groups-list__empty">Aucun groupe pour l'instant.</li>
             )}
-            {customGroups.map((group) => {
+            {sortedCustomGroups.map((group) => {
               const cover = list.find((entry) => entry.animeId === group.coverAnimeId)?.coverImage;
               return (
                 <li key={group.id} className="my-groups-list__item">

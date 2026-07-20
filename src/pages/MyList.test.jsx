@@ -401,6 +401,26 @@ describe('MyList', () => {
     ]);
   });
 
+  it('lists custom groups sorted alphabetically by title, not creation order', async () => {
+    getList.mockReturnValue([
+      { ...entry, animeId: 1, title: 'A1' },
+      { ...entry, animeId: 2, title: 'A2' },
+      { ...entry, animeId: 3, title: 'A3' },
+    ]);
+    upsertCustomGroup({ title: 'Zelda', animeIds: [1] });
+    upsertCustomGroup({ title: 'Attack on Titan', animeIds: [2] });
+    upsertCustomGroup({ title: 'Naruto', animeIds: [3] });
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+
+    const titles = screen.getAllByText(/^(Zelda|Attack on Titan|Naruto)$/, {
+      selector: '.my-groups-list__title',
+    });
+    expect(titles.map((el) => el.textContent)).toEqual(['Attack on Titan', 'Naruto', 'Zelda']);
+  });
+
   it('does not offer anime that already belong to a different group', async () => {
     getList.mockReturnValue([
       { ...entry, animeId: 1, title: 'Clannad' },

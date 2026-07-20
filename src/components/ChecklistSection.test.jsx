@@ -87,6 +87,35 @@ describe('ChecklistSection', () => {
     expect(screen.getByText('Naruto')).toBeInTheDocument();
   });
 
+  it('groups franchise-looking entries into a collapsible sub-block', async () => {
+    const franchiseEntries = [
+      { animeId: 1, title: 'Kara no Kyoukai: Fukan Fuukei' },
+      { animeId: 2, title: 'Kara no Kyoukai: Mirai Fukuin' },
+      { animeId: 3, title: 'Naruto' },
+    ];
+    const user = userEvent.setup();
+
+    render(
+      <ChecklistSection
+        title="Mes animes vus"
+        entries={franchiseEntries}
+        selectedIds={[]}
+        onToggle={() => {}}
+        expanded={true}
+        onToggleExpanded={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+    expect(screen.getByText('2 animes')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Kara no Kyoukai: Fukan Fuukei')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /2 animes/ }));
+
+    expect(screen.getByLabelText('Kara no Kyoukai: Fukan Fuukei')).toBeInTheDocument();
+    expect(screen.getByLabelText('Kara no Kyoukai: Mirai Fukuin')).toBeInTheDocument();
+  });
+
   it('reflects selectedIds as checked and calls onToggle with the entry', async () => {
     const onToggle = vi.fn();
     const user = userEvent.setup();

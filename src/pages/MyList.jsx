@@ -5,7 +5,7 @@ import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStor
 import { getAnimeDetails } from '../api/queries.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
-import { groupFranchises } from './groupFranchises.js';
+import { groupFranchises } from '../utils/groupFranchises.js';
 import {
   serializeList,
   parseImportedList,

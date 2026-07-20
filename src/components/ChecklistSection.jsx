@@ -1,9 +1,29 @@
 import { useState } from 'react';
+import { groupFranchises } from '../utils/groupFranchises.js';
 
 function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onToggleExpanded }) {
   const [search, setSearch] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   const filtered = entries.filter((entry) => entry.title.toLowerCase().includes(search.toLowerCase()));
+  const groups = groupFranchises(filtered);
+
+  function toggleGroup(key) {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function renderCheckbox(entry) {
+    return (
+      <label key={entry.animeId} className="checklist__item">
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(entry.animeId)}
+          onChange={() => onToggle(entry)}
+        />
+        {entry.title}
+      </label>
+    );
+  }
 
   return (
     <div className="checklist">
@@ -29,16 +49,31 @@ function ChecklistSection({ title, entries, selectedIds, onToggle, expanded, onT
           {entries.length > 0 && filtered.length === 0 && (
             <p className="checklist__empty">Aucun résultat.</p>
           )}
-          {filtered.map((entry) => (
-            <label key={entry.animeId} className="checklist__item">
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(entry.animeId)}
-                onChange={() => onToggle(entry)}
-              />
-              {entry.title}
-            </label>
-          ))}
+          {groups.map((group) => {
+            if (group.entries.length === 1) return renderCheckbox(group.entries[0]);
+
+            const groupExpanded = !!expandedGroups[group.key];
+            const selectedCount = group.entries.filter((entry) => selectedIds.includes(entry.animeId)).length;
+
+            return (
+              <div key={group.key} className="checklist__group">
+                <button
+                  type="button"
+                  className="checklist__group-toggle"
+                  aria-expanded={groupExpanded}
+                  onClick={() => toggleGroup(group.key)}
+                >
+                  <span className="checklist__group-title">{group.entries[0].title}</span>
+                  <span className="checklist__group-count">
+                    {selectedCount > 0 ? `${selectedCount}/${group.entries.length}` : group.entries.length} animes
+                  </span>
+                </button>
+                {groupExpanded && (
+                  <div className="checklist__group-items">{group.entries.map(renderCheckbox)}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

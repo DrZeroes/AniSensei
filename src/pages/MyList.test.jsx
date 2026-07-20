@@ -132,8 +132,9 @@ describe('MyList', () => {
     await waitFor(() => expect(getAnimeDetails).toHaveBeenCalledWith(1));
     await waitFor(() => expect(saveList).toHaveBeenCalled());
 
-    // The backfilled tag is now offered as a filter option (shown translated).
-    expect(screen.getByRole('option', { name: 'Ellipse temporelle' })).toBeInTheDocument();
+    // The backfilled tag is now offered as a filter suggestion (shown translated).
+    const datalist = document.getElementById('my-list-tag-options');
+    expect([...datalist.options].map((option) => option.value)).toContain('Ellipse temporelle');
   });
 
   it('does not re-fetch details for entries that already have tags (even an empty list)', async () => {
@@ -177,19 +178,34 @@ describe('MyList', () => {
     expect(screen.getByText('One Piece')).toBeInTheDocument();
     expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Filtrer par genre'), 'Action');
+    const genreInput = screen.getByLabelText('Filtrer par genre');
+    await user.type(genreInput, 'Action');
     expect(screen.getByText('One Piece')).toBeInTheDocument();
     expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Filtrer par genre'), 'Tous les genres');
+    await user.clear(genreInput);
 
     await user.selectOptions(screen.getByLabelText('Filtrer par studio'), 'Ufotable');
     expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
     expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Filtrer par studio'), 'Tous les studios');
 
-    await user.selectOptions(screen.getByLabelText('Filtrer par tag'), 'Pirates');
+    await user.type(screen.getByLabelText('Filtrer par tag'), 'Pirates');
     expect(screen.getByText('One Piece')).toBeInTheDocument();
     expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
+  });
+
+  it('finds a genre by typing its French translation even though it is stored/filtered in English', async () => {
+    getList.mockReturnValue([
+      entry, // genres: ['Action']
+      { ...entry, animeId: 2, title: 'Fate/stay night', genres: ['Slice of Life'] },
+    ]);
+    const user = userEvent.setup();
+
+    renderMyList();
+    await user.type(screen.getByLabelText('Filtrer par genre'), 'Tranche de vie');
+
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
   });
 
   it('sorts by tag when that sort option is chosen', async () => {

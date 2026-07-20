@@ -73,8 +73,10 @@ function MyList() {
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('title');
   const [genreFilter, setGenreFilter] = useState('');
+  const [genreQuery, setGenreQuery] = useState('');
   const [studioFilter, setStudioFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [tagQuery, setTagQuery] = useState('');
   const [pendingImport, setPendingImport] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
 
@@ -87,6 +89,37 @@ function MyList() {
   const availableGenres = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.genres ?? [])), [list]);
   const availableStudios = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.studios ?? [])), [list]);
   const availableTags = useMemo(() => uniqueSorted(list.flatMap((entry) => entry.tags ?? [])), [list]);
+
+  // Typed by hand in either French or English — matches the AniList genre
+  // regardless of which language was typed, since the translation is only a
+  // display label (the stored/filtered value is always the English original).
+  function handleGenreQueryChange(event) {
+    const value = event.target.value;
+    setGenreQuery(value);
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === '') {
+      setGenreFilter('');
+      return;
+    }
+    const match = availableGenres.find(
+      (genre) => translateGenre(genre).toLowerCase() === trimmed || genre.toLowerCase() === trimmed
+    );
+    if (match) setGenreFilter(match);
+  }
+
+  function handleTagQueryChange(event) {
+    const value = event.target.value;
+    setTagQuery(value);
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === '') {
+      setTagFilter('');
+      return;
+    }
+    const match = availableTags.find(
+      (tag) => translateTag(tag).toLowerCase() === trimmed || tag.toLowerCase() === trimmed
+    );
+    if (match) setTagFilter(match);
+  }
 
   const visibleList = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -281,14 +314,19 @@ function MyList() {
             </option>
           ))}
         </select>
-        <select value={genreFilter} onChange={(event) => setGenreFilter(event.target.value)} aria-label="Filtrer par genre">
-          <option value="">Tous les genres</option>
+        <input
+          type="text"
+          list="my-list-genre-options"
+          value={genreQuery}
+          onChange={handleGenreQueryChange}
+          placeholder="Filtrer par genre (FR ou EN)..."
+          aria-label="Filtrer par genre"
+        />
+        <datalist id="my-list-genre-options">
           {availableGenres.map((genre) => (
-            <option key={genre} value={genre}>
-              {translateGenre(genre)}
-            </option>
+            <option key={genre} value={translateGenre(genre)} />
           ))}
-        </select>
+        </datalist>
         <select value={studioFilter} onChange={(event) => setStudioFilter(event.target.value)} aria-label="Filtrer par studio">
           <option value="">Tous les studios</option>
           {availableStudios.map((studio) => (
@@ -297,14 +335,19 @@ function MyList() {
             </option>
           ))}
         </select>
-        <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} aria-label="Filtrer par tag">
-          <option value="">Tous les tags</option>
+        <input
+          type="text"
+          list="my-list-tag-options"
+          value={tagQuery}
+          onChange={handleTagQueryChange}
+          placeholder="Filtrer par tag (FR ou EN)..."
+          aria-label="Filtrer par tag"
+        />
+        <datalist id="my-list-tag-options">
           {availableTags.map((tag) => (
-            <option key={tag} value={tag}>
-              {translateTag(tag)}
-            </option>
+            <option key={tag} value={translateTag(tag)} />
           ))}
-        </select>
+        </datalist>
         <button type="button" className="my-list-controls__action" onClick={handleExport}>
           Exporter
         </button>

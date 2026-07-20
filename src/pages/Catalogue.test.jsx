@@ -45,6 +45,39 @@ describe('Catalogue', () => {
     expect(browseCatalogue).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
   });
 
+  it('hides anime already marked "vu" by default, showing them once the checkbox is checked', async () => {
+    getList.mockReturnValue([{ animeId: 1, status: 'vu' }]);
+    browseCatalogue.mockResolvedValue({
+      media: [
+        { id: 1, title: 'One Piece', genres: [], studios: [] },
+        { id: 2, title: 'Naruto', genres: [], studios: [] },
+      ],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument());
+    expect(screen.queryByText('One Piece')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes déjà vus' }));
+
+    expect(screen.getByText('One Piece')).toBeInTheDocument();
+    expect(screen.getByText('Naruto')).toBeInTheDocument();
+  });
+
+  it('does not hide an anime that is only "à voir" (not seen)', async () => {
+    getList.mockReturnValue([{ animeId: 1, status: 'a_voir' }]);
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+
+    renderCatalogue();
+
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+  });
+
   it('searches by title, debounced, and resets to page 1', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
@@ -191,14 +224,30 @@ describe('Catalogue', () => {
     expect(browseCatalogue).toHaveBeenCalledTimes(1); // no re-fetch triggered
   });
 
-  it('shows the list badge for anime already present in the local list', async () => {
-    getList.mockReset().mockReturnValue([{ animeId: 1, status: 'vu', note: null, excluded: false }]);
+  it('shows the list badge for a non-"vu" anime already present in the local list', async () => {
+    getList.mockReset().mockReturnValue([{ animeId: 1, status: 'a_voir', note: null, excluded: false }]);
     browseCatalogue.mockResolvedValue({
       media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
       hasNextPage: false,
     });
 
     renderCatalogue();
+
+    await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
+    expect(screen.getByText('À voir')).toBeInTheDocument();
+  });
+
+  it('still shows the "Vu" badge for a seen anime once "Inclure les animes déjà vus" is checked', async () => {
+    getList.mockReset().mockReturnValue([{ animeId: 1, status: 'vu', note: null, excluded: false }]);
+    browseCatalogue.mockResolvedValue({
+      media: [{ id: 1, title: 'One Piece', genres: [], studios: [] }],
+      hasNextPage: false,
+    });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes déjà vus' }));
 
     await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument());
     expect(screen.getByText('Vu')).toBeInTheDocument();

@@ -321,6 +321,28 @@ button:focus-visible {
   max-width: 320px;
 }
 
+.catalogue-seen-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.catalogue-seen-toggle input {
+  accent-color: var(--accent-2);
+}
+
+.catalogue-seen-toggle:has(input:checked) {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 /* Tag filter */
 
 .tag-filter {

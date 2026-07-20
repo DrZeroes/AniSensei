@@ -29,6 +29,7 @@ function Catalogue() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [status, setStatus] = useState('idle');
   const [markedEntries, setMarkedEntries] = useState({});
+  const [includeSeen, setIncludeSeen] = useState(false);
   const requestIdRef = useRef(0);
 
   async function loadPage(targetPage, replace) {
@@ -107,6 +108,11 @@ function Catalogue() {
   function findListEntry(animeId) {
     return markedEntries[animeId] ?? localList.find((entry) => entry.animeId === animeId) ?? null;
   }
+
+  // Hidden by default so the catalogue surfaces things you haven't seen yet;
+  // the checkbox opts back in to browsing everything, seen or not.
+  const seenIds = new Set(localList.filter((entry) => entry.status === 'vu').map((entry) => entry.animeId));
+  const visibleMedia = includeSeen ? media : media.filter((anime) => !seenIds.has(anime.id));
 
   function handleAddSeen(anime) {
     upsertAnime({
@@ -213,6 +219,14 @@ function Catalogue() {
             </option>
           ))}
         </select>
+        <label className="catalogue-seen-toggle">
+          <input
+            type="checkbox"
+            checked={includeSeen}
+            onChange={(event) => setIncludeSeen(event.target.checked)}
+          />
+          Inclure les animes déjà vus
+        </label>
       </div>
 
       {status === 'error' && (
@@ -226,7 +240,7 @@ function Catalogue() {
       {status === 'empty' && <p>Aucun anime trouvé.</p>}
 
       <div className="results-grid">
-        {media.map((anime) => (
+        {visibleMedia.map((anime) => (
           <AnimeCard
             key={anime.id}
             anime={anime}

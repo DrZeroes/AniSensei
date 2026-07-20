@@ -40,7 +40,7 @@ const SEARCH_QUERY = `
         seasonYear
         format
         status
-        studios { nodes { name } }
+        studios(isMain: true) { nodes { name } }
       }
     }
   }
@@ -63,7 +63,7 @@ const DETAILS_QUERY = `
       coverImage { large }
       genres
       tags { name }
-      studios { nodes { name } }
+      studios(isMain: true) { nodes { name } }
       averageScore
       seasonYear
       format
@@ -109,7 +109,7 @@ const RECOMMENDATIONS_QUERY = `
             seasonYear
             format
             status
-            studios { nodes { name } }
+            studios(isMain: true) { nodes { name } }
           }
         }
       }
@@ -144,7 +144,7 @@ const RELATIONS_QUERY = `
             seasonYear
             format
             status
-            studios { nodes { name } }
+            studios(isMain: true) { nodes { name } }
           }
         }
       }
@@ -196,7 +196,7 @@ const CATALOGUE_QUERY = `
         seasonYear
         format
         status
-        studios { nodes { name } }
+        studios(isMain: true) { nodes { name } }
       }
     }
   }

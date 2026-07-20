@@ -45,7 +45,7 @@ describe('Stats', () => {
   it('hides the genre/studio breakdown until expanded', () => {
     render(<Stats />);
 
-    expect(screen.queryByText('Fantasy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fantastique')).not.toBeInTheDocument();
   });
 
   it('shows the genre breakdown with counts once expanded', async () => {
@@ -54,10 +54,10 @@ describe('Stats', () => {
 
     await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
 
-    const list = screen.getByText('Fantasy').closest('ul');
+    const list = screen.getByText('Fantastique').closest('ul');
     const actionRow = within(list).getByText('Action').closest('li');
     expect(actionRow).toHaveTextContent('2');
-    const fantasyRow = within(list).getByText('Fantasy').closest('li');
+    const fantasyRow = within(list).getByText('Fantastique').closest('li');
     expect(fantasyRow).toHaveTextContent('1');
   });
 

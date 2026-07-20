@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { translateGenre } from '../i18n/genreLabels.js';
 
 function badgeLabel(listEntry) {
   if (!listEntry) return null;
@@ -8,7 +9,8 @@ function badgeLabel(listEntry) {
 }
 
 function metaLine(anime) {
-  const genreText = (anime.genres ?? []).length > 0 ? anime.genres.join(', ') : null;
+  const genreText =
+    (anime.genres ?? []).length > 0 ? anime.genres.map(translateGenre).join(', ') : null;
   const yearText = anime.seasonYear ?? 'Pas encore diffusé';
   return [yearText, genreText].filter(Boolean).join(' · ');
 }

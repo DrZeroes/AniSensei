@@ -44,7 +44,7 @@ describe('buildScoreTooltip', () => {
     const candidate = { genres: ['Fantasy'], studios: [], tags: [] };
     const tooltip = buildScoreTooltip(candidate, [], [favorite]);
 
-    expect(tooltip).toContain('Coups de cœur — genre "Fantasy" x1 : +1');
+    expect(tooltip).toContain('Coups de cœur — genre "Fantastique" x1 : +1');
     expect(tooltip).toContain('Sous-total genres/studios/tags : 1.0');
   });
 

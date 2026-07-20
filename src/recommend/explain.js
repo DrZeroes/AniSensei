@@ -1,4 +1,5 @@
 import { WEIGHTS } from './scoring.js';
+import { translateGenre } from '../i18n/genreLabels.js';
 
 // Tags are shown in short form, capped to a few — a candidate can share a
 // dozen+ tags with a base anime, and listing them all would swamp the line.
@@ -22,7 +23,7 @@ export function explainMatch(candidate, baseList = []) {
   }
 
   const parts = [];
-  if (genres.size > 0) parts.push(`genres : ${[...genres].join(', ')}`);
+  if (genres.size > 0) parts.push(`genres : ${[...genres].map(translateGenre).join(', ')}`);
   if (studios.size > 0) parts.push(`studio : ${[...studios].join(', ')}`);
   if (tags.size > 0) {
     const shown = [...tags].slice(0, MAX_TAGS_SHOWN);
@@ -59,7 +60,7 @@ function tally(candidate, list, weights, label, lines) {
   let subtotal = 0;
   for (const [genre, count] of genreCounts) {
     const points = count * weights.genre;
-    lines.push(`${label} — genre "${genre}" x${count} : +${points}`);
+    lines.push(`${label} — genre "${translateGenre(genre)}" x${count} : +${points}`);
     subtotal += points;
   }
   for (const [studio, count] of studioCounts) {

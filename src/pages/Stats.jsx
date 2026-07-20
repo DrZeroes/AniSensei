@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getList } from '../storage/listStorage.js';
 import { computeStats } from '../stats/computeStats.js';
+import { translateGenre } from '../i18n/genreLabels.js';
 
 function StatTile({ label, value }) {
   return (
@@ -11,7 +12,7 @@ function StatTile({ label, value }) {
   );
 }
 
-function BreakdownSection({ title, counts }) {
+function BreakdownSection({ title, counts, translate = (name) => name }) {
   const [expanded, setExpanded] = useState(false);
   const max = counts[0]?.[1] ?? 1;
 
@@ -32,7 +33,7 @@ function BreakdownSection({ title, counts }) {
           )}
           {counts.map(([name, count]) => (
             <li key={name}>
-              <span className="stats-breakdown__label">{name}</span>
+              <span className="stats-breakdown__label">{translate(name)}</span>
               <span className="stats-breakdown__bar-wrap">
                 <span className="stats-breakdown__bar" style={{ width: `${(count / max) * 100}%` }} />
               </span>
@@ -60,11 +61,15 @@ function Stats() {
         <StatTile label="Aimés" value={stats.likedCount} />
         <StatTile label="Pas aimés" value={stats.dislikedCount} />
         <StatTile label="Exclus" value={stats.excludedCount} />
-        <StatTile label="Genre favori" value={stats.topGenre ?? '—'} />
+        <StatTile label="Genre favori" value={stats.topGenre ? translateGenre(stats.topGenre) : '—'} />
         <StatTile label="Studio favori" value={stats.topStudio ?? '—'} />
       </div>
 
-      <BreakdownSection title="Voir la répartition par genre" counts={stats.genreCounts} />
+      <BreakdownSection
+        title="Voir la répartition par genre"
+        counts={stats.genreCounts}
+        translate={translateGenre}
+      />
       <BreakdownSection title="Voir la répartition par studio" counts={stats.studioCounts} />
       <BreakdownSection title="Voir le top 20 des tags" counts={stats.tagCounts} />
     </section>

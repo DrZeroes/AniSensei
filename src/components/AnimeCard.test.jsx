@@ -10,7 +10,7 @@ describe('AnimeCard', () => {
   it('renders the title and genres', () => {
     render(<AnimeCard anime={anime} />);
     expect(screen.getByText('One Piece')).toBeInTheDocument();
-    expect(screen.getByText('Pas encore diffusé · Action, Adventure')).toBeInTheDocument();
+    expect(screen.getByText('Pas encore diffusé · Action, Aventure')).toBeInTheDocument();
   });
 
   it('shows a status badge when a list entry is provided', () => {
@@ -60,12 +60,12 @@ describe('AnimeCard', () => {
 
   it('shows the release year alongside the genres', () => {
     render(<AnimeCard anime={{ ...anime, seasonYear: 1999 }} />);
-    expect(screen.getByText('1999 · Action, Adventure')).toBeInTheDocument();
+    expect(screen.getByText('1999 · Action, Aventure')).toBeInTheDocument();
   });
 
   it('shows "Pas encore diffusé" instead of a year when the anime has not aired yet', () => {
     render(<AnimeCard anime={{ ...anime, seasonYear: null }} />);
-    expect(screen.getByText('Pas encore diffusé · Action, Adventure')).toBeInTheDocument();
+    expect(screen.getByText('Pas encore diffusé · Action, Aventure')).toBeInTheDocument();
   });
 
   it('shows a "Bonus" tag with an explanation when marked as the bonus pick', () => {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAnimeDetails, getAnimeRecommendations } from '../api/queries.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
+import { translateGenre } from '../i18n/genreLabels.js';
 
 const STATUS_OPTIONS = ['a_voir', 'vu'];
 const NOTE_OPTIONS = ['coup_de_coeur', 'aime', 'pas_aime'];
@@ -70,7 +71,7 @@ function AnimeDetail() {
       {anime.coverImage && <img src={anime.coverImage} alt={anime.title} />}
       <p>{anime.description}</p>
       <p>
-        <span className="anime-detail__label">Genres</span> : {anime.genres.join(', ')}
+        <span className="anime-detail__label">Genres</span> : {anime.genres.map(translateGenre).join(', ')}
       </p>
       <p>
         <span className="anime-detail__label">Tags</span> : {anime.tags.join(', ')}

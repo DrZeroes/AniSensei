@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/AnimeCard.jsx';
 import { browseCatalogue, getGenreCollection, getTagCollection } from '../api/queries.js';
 import { getList, upsertAnime } from '../storage/listStorage.js';
+import { translateGenre } from '../i18n/genreLabels.js';
 
 const SORT_OPTIONS = [
   { value: 'POPULARITY_DESC', label: 'Popularité' },
@@ -105,6 +106,26 @@ function Catalogue() {
     loadPage(nextPage, false);
   }
 
+  function handleResetFilters() {
+    setSearch('');
+    setGenres([]);
+    setTags([]);
+    setTagQuery('');
+    setYear('');
+    setSort('POPULARITY_DESC');
+    setIncludeSeen(false);
+    setIncludeExcluded(false);
+  }
+
+  const hasActiveFilters =
+    search !== '' ||
+    genres.length > 0 ||
+    tags.length > 0 ||
+    year !== '' ||
+    sort !== 'POPULARITY_DESC' ||
+    includeSeen ||
+    includeExcluded;
+
   const localList = getList();
   function findListEntry(animeId) {
     return markedEntries[animeId] ?? localList.find((entry) => entry.animeId === animeId) ?? null;
@@ -173,7 +194,7 @@ function Catalogue() {
                   checked={genres.includes(genre)}
                   onChange={() => toggleGenre(genre)}
                 />
-                {genre}
+                {translateGenre(genre)}
               </label>
             ))}
           </div>
@@ -241,6 +262,11 @@ function Catalogue() {
           />
           Inclure les animes exclus
         </label>
+        {hasActiveFilters && (
+          <button type="button" onClick={handleResetFilters}>
+            Réinitialiser les filtres
+          </button>
+        )}
       </div>
 
       {status === 'error' && (

@@ -118,6 +118,34 @@ describe('Catalogue', () => {
     expect(screen.getByText('One Piece')).toBeInTheDocument();
   });
 
+  it('shows a "Réinitialiser les filtres" button once a filter is active, and it clears everything', async () => {
+    browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
+    const user = userEvent.setup();
+
+    renderCatalogue();
+    await waitFor(() => expect(browseCatalogue).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('button', { name: 'Réinitialiser les filtres' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Rechercher un anime par titre'), 'One Piece');
+    await user.click(await screen.findByLabelText('Action'));
+    await user.type(screen.getByLabelText('Filtrer par année'), '2020');
+    await user.click(screen.getByRole('checkbox', { name: 'Inclure les animes déjà vus' }));
+
+    const resetButton = await screen.findByRole('button', { name: 'Réinitialiser les filtres' });
+    await user.click(resetButton);
+
+    expect(screen.getByLabelText('Rechercher un anime par titre')).toHaveValue('');
+    expect(screen.getByLabelText('Action')).not.toBeChecked();
+    expect(screen.getByLabelText('Filtrer par année')).toHaveValue(null);
+    expect(screen.getByRole('checkbox', { name: 'Inclure les animes déjà vus' })).not.toBeChecked();
+    expect(screen.queryByRole('button', { name: 'Réinitialiser les filtres' })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(browseCatalogue).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: '', genres: [], tags: [], year: null, sort: ['POPULARITY_DESC'] })
+      )
+    );
+  });
+
   it('searches by title, debounced, and resets to page 1', async () => {
     browseCatalogue.mockResolvedValue({ media: [], hasNextPage: false });
     const user = userEvent.setup();
@@ -196,7 +224,9 @@ describe('Catalogue', () => {
       expect(browseCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({ genres: ['Action'] }))
     );
 
-    await user.click(screen.getByLabelText('Comedy'));
+    // The checkbox label shows the French translation ("Comédie"), but the
+    // underlying filter value stays the original AniList English genre name.
+    await user.click(screen.getByLabelText('Comédie'));
     await waitFor(() =>
       expect(browseCatalogue).toHaveBeenLastCalledWith(
         expect.objectContaining({ genres: ['Action', 'Comedy'] })

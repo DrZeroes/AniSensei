@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
 import { getAnimeDetails } from '../api/queries.js';
+import { translateGenre } from '../i18n/genreLabels.js';
 import {
   serializeList,
   parseImportedList,
@@ -203,7 +204,7 @@ function MyList() {
           <option value="">Tous les genres</option>
           {availableGenres.map((genre) => (
             <option key={genre} value={genre}>
-              {genre}
+              {translateGenre(genre)}
             </option>
           ))}
         </select>

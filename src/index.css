@@ -589,10 +589,16 @@ button:focus-visible {
   position: absolute;
   z-index: 30;
   top: 100%;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   margin-top: 0.5rem;
   width: 300px;
-  max-width: min(320px, 85vw);
+  /* Centered on the button (rather than anchored to its left edge) so it
+     doesn't run off-screen for cards near the right edge of the grid; still
+     clamped to the viewport for cards near either edge. */
+  max-width: min(300px, calc(100vw - 2rem));
+  max-height: min(320px, 70vh);
+  overflow-y: auto;
   background: var(--bg-elevated-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -604,7 +610,11 @@ button:focus-visible {
   text-align: left;
 }
 
-.anime-card__score:hover + .anime-card__detail,
+/* Triggered by hovering the wrapping container (not just the score button)
+   so moving the pointer from the button down into the tooltip to read it
+   doesn't immediately close it — the tooltip is a DOM descendant of the
+   wrap, so it stays "hovered" even though it's visually below the button. */
+.anime-card__score-wrap:hover .anime-card__detail,
 .anime-card__score:focus + .anime-card__detail,
 .anime-card__score:focus-visible + .anime-card__detail {
   display: block;

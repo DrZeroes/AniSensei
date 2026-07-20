@@ -40,7 +40,7 @@ function App() {
           <NavLink to="/" end>
             Accueil
           </NavLink>
-          <NavLink to="/conseil-moi">Conseil moi</NavLink>
+          <NavLink to="/conseil-moi">Conseille-moi</NavLink>
           <NavLink to="/catalogue">Catalogue</NavLink>
           <NavLink to="/ma-liste">Ma liste</NavLink>
           <NavLink to="/stats">Mes stats</NavLink>

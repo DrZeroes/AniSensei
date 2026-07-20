@@ -21,7 +21,7 @@ describe('Landing', () => {
   it('links to every tab of the app', () => {
     renderLanding();
 
-    expect(screen.getByRole('link', { name: /Conseil moi/ })).toHaveAttribute('href', '/conseil-moi');
+    expect(screen.getByRole('link', { name: /Conseille-moi/ })).toHaveAttribute('href', '/conseil-moi');
     expect(screen.getByRole('link', { name: /Catalogue/ })).toHaveAttribute('href', '/catalogue');
     expect(screen.getByRole('link', { name: /Ma liste/ })).toHaveAttribute('href', '/ma-liste');
     expect(screen.getByRole('link', { name: /Mes stats/ })).toHaveAttribute('href', '/stats');

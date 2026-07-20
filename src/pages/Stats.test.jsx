@@ -15,6 +15,7 @@ const watched = {
   excluded: false,
   genres: ['Action', 'Fantasy'],
   studios: ['Ufotable'],
+  tags: ['Time Skip'],
 };
 const watched2 = {
   animeId: 2,
@@ -23,6 +24,7 @@ const watched2 = {
   excluded: false,
   genres: ['Action'],
   studios: ['Ufotable'],
+  tags: ['Time Skip', 'Tsundere'],
 };
 const toWatch = { animeId: 3, status: 'a_voir', note: null, excluded: false, genres: [], studios: [] };
 
@@ -57,6 +59,19 @@ describe('Stats', () => {
     expect(actionRow).toHaveTextContent('2');
     const fantasyRow = within(list).getByText('Fantasy').closest('li');
     expect(fantasyRow).toHaveTextContent('1');
+  });
+
+  it('shows the top-tags breakdown with counts once expanded', async () => {
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir le top 20 des tags' }));
+
+    const list = screen.getByText('Tsundere').closest('ul');
+    const timeSkipRow = within(list).getByText('Time Skip').closest('li');
+    expect(timeSkipRow).toHaveTextContent('2');
+    const tsundereRow = within(list).getByText('Tsundere').closest('li');
+    expect(tsundereRow).toHaveTextContent('1');
   });
 
   it('shows a message when there is nothing watched yet', async () => {

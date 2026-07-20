@@ -19,9 +19,9 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'À propos' })).toBeInTheDocument();
   });
 
-  it('renders a link to the "Conseil moi" recommendation page, and shows the landing page by default', () => {
+  it('renders a link to the "Conseille-moi" recommendation page, and shows the landing page by default', () => {
     render(<App />);
-    expect(screen.getByRole('link', { name: 'Conseil moi' })).toHaveAttribute('href', '#/conseil-moi');
+    expect(screen.getByRole('link', { name: 'Conseille-moi' })).toHaveAttribute('href', '#/conseil-moi');
     expect(screen.getByText('Bienvenue sur AniSensei')).toBeInTheDocument();
   });
 

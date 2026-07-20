@@ -66,6 +66,7 @@ function Stats() {
 
       <BreakdownSection title="Voir la répartition par genre" counts={stats.genreCounts} />
       <BreakdownSection title="Voir la répartition par studio" counts={stats.studioCounts} />
+      <BreakdownSection title="Voir le top 20 des tags" counts={stats.tagCounts} />
     </section>
   );
 }

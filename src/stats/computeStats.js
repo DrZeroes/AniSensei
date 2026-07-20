@@ -1,3 +1,5 @@
+const MAX_TAG_BREAKDOWN = 20;
+
 function countBy(entries, field) {
   const counts = new Map();
   for (const entry of entries) {
@@ -18,6 +20,9 @@ export function computeStats(list) {
 
   const genreCounts = countBy(watched, 'genres');
   const studioCounts = countBy(watched, 'studios');
+  // Tags run into the hundreds of distinct values (unlike genres/studios),
+  // so the breakdown is capped to the top 20 rather than showing everything.
+  const tagCounts = countBy(watched, 'tags').slice(0, MAX_TAG_BREAKDOWN);
 
   return {
     total: list.length,
@@ -31,5 +36,6 @@ export function computeStats(list) {
     topStudio: studioCounts[0]?.[0] ?? null,
     genreCounts,
     studioCounts,
+    tagCounts,
   };
 }

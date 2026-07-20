@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const SECTIONS = [
   {
     to: '/conseil-moi',
-    title: 'Conseil moi',
+    title: 'Conseille-moi',
     description:
       'Donne un ou plusieurs animes que tu as aimés et reçois des suggestions personnalisées, avec une carte "Découverte" bonus à chaque tirage.',
   },

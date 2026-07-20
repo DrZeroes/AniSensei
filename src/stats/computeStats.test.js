@@ -8,6 +8,7 @@ const watchedFavorite = {
   excluded: false,
   genres: ['Action', 'Fantasy'],
   studios: ['Ufotable'],
+  tags: ['Time Skip', 'Tsundere'],
 };
 const watchedLiked = {
   animeId: 2,
@@ -16,6 +17,7 @@ const watchedLiked = {
   excluded: false,
   genres: ['Action'],
   studios: ['Ufotable'],
+  tags: ['Time Skip'],
 };
 const watchedDisliked = {
   animeId: 3,
@@ -24,6 +26,7 @@ const watchedDisliked = {
   excluded: false,
   genres: ['Romance'],
   studios: ['Toei Animation'],
+  tags: ['Ensemble Cast'],
 };
 const toWatch = { animeId: 4, status: 'a_voir', note: null, excluded: false, genres: [], studios: [] };
 const excludedEntry = { animeId: 5, status: 'a_voir', note: null, excluded: true, genres: [], studios: [] };
@@ -77,5 +80,32 @@ describe('computeStats', () => {
     expect(stats.total).toBe(0);
     expect(stats.topGenre).toBeNull();
     expect(stats.topStudio).toBeNull();
+  });
+
+  it('returns a tag breakdown from watched anime, sorted by count descending', () => {
+    const stats = computeStats([watchedFavorite, watchedLiked, watchedDisliked]);
+
+    expect(stats.tagCounts).toEqual([
+      ['Time Skip', 2],
+      ['Tsundere', 1],
+      ['Ensemble Cast', 1],
+    ]);
+  });
+
+  it('caps the tag breakdown to the top 20', () => {
+    const manyTagEntries = Array.from({ length: 25 }, (_, i) => ({
+      animeId: 100 + i,
+      status: 'vu',
+      note: null,
+      excluded: false,
+      genres: [],
+      studios: [],
+      tags: [`Tag ${i}`, 'Shared'],
+    }));
+
+    const stats = computeStats(manyTagEntries);
+
+    expect(stats.tagCounts).toHaveLength(20);
+    expect(stats.tagCounts[0]).toEqual(['Shared', 25]);
   });
 });

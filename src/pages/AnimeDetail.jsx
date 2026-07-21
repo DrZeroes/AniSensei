@@ -24,7 +24,9 @@ function AnimeDetail() {
       .then(([data, recommendations]) => {
         if (requestIdRef.current !== requestId) return; // a newer request has since been issued; discard this stale response
         setAnime(data);
-        setSimilar(recommendations.map((node) => node.media));
+        setSimilar(
+          recommendations.map((node) => node.media).filter((media) => media.status !== 'NOT_YET_RELEASED')
+        );
         setEntry(getList().find((item) => item.animeId === Number(id)) ?? null);
         setStatus('idle');
       })

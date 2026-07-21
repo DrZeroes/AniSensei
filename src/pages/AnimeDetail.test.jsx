@@ -59,6 +59,19 @@ describe('AnimeDetail', () => {
     expect(screen.getByText('Tsukihime')).toBeInTheDocument();
   });
 
+  it('excludes not-yet-released anime from the "Animes similaires" list', async () => {
+    getAnimeDetails.mockResolvedValue(details);
+    getAnimeRecommendations.mockResolvedValue([
+      { rating: 10, media: { id: 2, title: 'Tsukihime' } },
+      { rating: 5, media: { id: 3, title: 'Upcoming Sequel', status: 'NOT_YET_RELEASED' } },
+    ]);
+
+    renderDetail();
+
+    await waitFor(() => expect(screen.getByText('Tsukihime')).toBeInTheDocument());
+    expect(screen.queryByText('Upcoming Sequel')).not.toBeInTheDocument();
+  });
+
   it('shows the season year when available', async () => {
     getAnimeDetails.mockResolvedValue({ ...details, seasonYear: 2006 });
     getAnimeRecommendations.mockResolvedValue([]);

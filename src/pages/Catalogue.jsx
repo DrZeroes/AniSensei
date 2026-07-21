@@ -14,6 +14,11 @@ const SORT_OPTIONS = [
 ];
 
 const SEARCH_DEBOUNCE_MS = 300;
+// The earliest commercially produced TV anime dates back to the late 1950s —
+// a generous lower bound for the year filter's suggestions.
+const EARLIEST_YEAR = 1958;
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR + 2 - EARLIEST_YEAR }, (_, i) => CURRENT_YEAR + 1 - i);
 // If everything popular has already been marked "vu"/excluded, a single page
 // could come back almost entirely hidden — keep pulling more pages until
 // there's a decent number of visible results, capped so this can't spiral
@@ -271,11 +276,21 @@ function Catalogue() {
         </fieldset>
         <input
           type="number"
+          list="catalogue-year-options"
           placeholder="Année"
           value={year}
           onChange={(event) => setYear(event.target.value)}
+          min={EARLIEST_YEAR}
+          max={CURRENT_YEAR + 1}
+          step={1}
+          inputMode="numeric"
           aria-label="Filtrer par année"
         />
+        <datalist id="catalogue-year-options">
+          {YEAR_OPTIONS.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
         <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Trier par">
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

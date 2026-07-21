@@ -23,11 +23,12 @@ jobs:
       - run: npm run build
         env:
           VITE_APP_VERSION: v${{ github.run_number }}
-      - name: Deploy to OVH via FTP
+      - name: Deploy to OVH via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.OVH_FTP_SERVER }}
           username: ${{ secrets.OVH_FTP_USERNAME }}
           password: ${{ secrets.OVH_FTP_PASSWORD }}
+          protocol: ftps
           local-dir: ./dist/
           server-dir: ${{ secrets.OVH_FTP_SERVER_DIR }}

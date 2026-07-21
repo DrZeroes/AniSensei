@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { getList } from '../storage/listStorage.js';
 import { backfillListMetadata } from '../storage/backfillMetadata.js';
+import { getCustomGroups } from '../storage/customGroups.js';
+import { applyCustomGroups } from '../utils/applyCustomGroups.js';
 import { computeStats } from '../stats/computeStats.js';
 import { translateGenre } from '../i18n/genreLabels.js';
 import { translateTag } from '../i18n/tagLabels.js';
@@ -14,7 +16,7 @@ function StatTile({ label, value }) {
   );
 }
 
-function BreakdownSection({ title, counts, list, field, translate = (name) => name }) {
+function BreakdownSection({ title, counts, list, field, customGroups, translate = (name) => name }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedName, setSelectedName] = useState(null);
   const max = counts[0]?.[1] ?? 1;
@@ -58,8 +60,17 @@ function BreakdownSection({ title, counts, list, field, translate = (name) => na
             const isSelected = selectedName === name;
             // Anime lookup is purely local (the personal list is already in
             // memory) — no AniList request needed to answer "which anime?".
-            const matchingTitles = isSelected
-              ? list.filter((entry) => (entry[field] ?? []).includes(name)).map((entry) => entry.title)
+            // Anime already grouped in "Mes groupes" are shown under their
+            // group name instead of as separate lines, for clarity.
+            const matchingBlocks = isSelected
+              ? applyCustomGroups(
+                  list.filter((entry) => (entry[field] ?? []).includes(name)),
+                  customGroups
+                ).sort((a, b) => {
+                  const titleA = a.custom ? a.custom.title : a.entries[0].title;
+                  const titleB = b.custom ? b.custom.title : b.entries[0].title;
+                  return titleA.localeCompare(titleB);
+                })
               : [];
 
             return (
@@ -80,9 +91,21 @@ function BreakdownSection({ title, counts, list, field, translate = (name) => na
                 </button>
                 {isSelected && (
                   <ul className="stats-breakdown__titles">
-                    {matchingTitles.map((animeTitle) => (
-                      <li key={animeTitle}>{animeTitle}</li>
-                    ))}
+                    {matchingBlocks.map((block) =>
+                      block.custom ? (
+                        <li key={block.key}>
+                          <strong className="stats-breakdown__group-title">{block.custom.title}</strong>{' '}
+                          <span className="stats-breakdown__count">({block.entries.length} animes)</span>
+                          <ul className="stats-breakdown__group-members">
+                            {block.entries.map((entry) => (
+                              <li key={entry.animeId}>{entry.title}</li>
+                            ))}
+                          </ul>
+                        </li>
+                      ) : (
+                        <li key={block.key}>{block.entries[0].title}</li>
+                      )
+                    )}
                   </ul>
                 )}
               </li>
@@ -115,6 +138,7 @@ function Stats() {
   // The genre/studio/tag breakdowns only ever count watched anime — match
   // that same subset when looking up which anime a clicked row corresponds to.
   const watchedList = list.filter((entry) => entry.status === 'vu');
+  const customGroups = getCustomGroups();
 
   return (
     <section>
@@ -137,6 +161,7 @@ function Stats() {
         counts={stats.genreCounts}
         list={watchedList}
         field="genres"
+        customGroups={customGroups}
         translate={translateGenre}
       />
       <BreakdownSection
@@ -144,12 +169,14 @@ function Stats() {
         counts={stats.studioCounts}
         list={watchedList}
         field="studios"
+        customGroups={customGroups}
       />
       <BreakdownSection
         title="Voir le top 20 des tags"
         counts={stats.tagCounts}
         list={watchedList}
         field="tags"
+        customGroups={customGroups}
         translate={translateTag}
       />
     </section>

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Stats from './Stats.jsx';
 import { getList } from '../storage/listStorage.js';
 import { getAnimeDetails } from '../api/queries.js';
+import { upsertCustomGroup } from '../storage/customGroups.js';
 
 vi.mock('../storage/listStorage.js', () => ({
   getList: vi.fn(),
@@ -48,6 +49,7 @@ describe('Stats', () => {
   beforeEach(() => {
     getList.mockReset().mockReturnValue([watched, watched2, toWatch]);
     getAnimeDetails.mockReset();
+    localStorage.clear(); // custom groups are real localStorage, not mocked
   });
 
   it('shows the summary tiles computed from the personal list', () => {
@@ -109,6 +111,40 @@ describe('Stats', () => {
     // Clicking again collapses the list of titles.
     await user.click(screen.getByRole('button', { name: /Action/ }));
     expect(screen.queryByText('Fate/Zero')).not.toBeInTheDocument();
+  });
+
+  it('sorts the matching anime/groups alphabetically', async () => {
+    getList.mockReturnValue([
+      { ...watched, title: 'Zelda Anime' },
+      { ...watched2, title: 'Attack on Titan' },
+    ]);
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
+    await user.click(screen.getByRole('button', { name: /Action/ }));
+
+    const titlesList = screen.getByText('Zelda Anime').closest('ul');
+    const items = within(titlesList).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent)).toEqual(['Attack on Titan', 'Zelda Anime']);
+  });
+
+  it('groups matching anime under their custom group name, for clarity', async () => {
+    getList.mockReturnValue([
+      { ...watched, animeId: 1, title: 'Fate/Zero' },
+      { ...watched2, animeId: 2, title: 'Fate/stay night' },
+    ]);
+    upsertCustomGroup({ title: 'Fate', animeIds: [2, 1] });
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
+    await user.click(screen.getByRole('button', { name: /Action/ }));
+
+    expect(screen.getByText('Fate')).toBeInTheDocument();
+    expect(screen.getByText('(2 animes)')).toBeInTheDocument();
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+    expect(screen.getByText('Fate/Zero')).toBeInTheDocument();
   });
 
   it('closes the "which anime" panel when clicking elsewhere on the page', async () => {

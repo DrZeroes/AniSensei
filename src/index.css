@@ -1725,6 +1725,19 @@ button:focus-visible {
   color: var(--text-muted);
 }
 
+.stats-breakdown__group-title {
+  color: var(--accent-2);
+}
+
+.stats-breakdown__group-members {
+  list-style: none;
+  margin: 0.15rem 0 0.3rem;
+  padding-left: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
 .stats-breakdown__label {
   overflow: hidden;
   text-overflow: ellipsis;

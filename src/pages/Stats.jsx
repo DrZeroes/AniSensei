@@ -21,10 +21,22 @@ function matchesFieldValue(entry, field, name) {
   return Array.isArray(raw) ? raw.includes(name) : raw === name;
 }
 
-function BreakdownSection({ title, counts, list, field, customGroups, translate = (name) => name }) {
+function BreakdownSection({
+  title,
+  counts,
+  list,
+  field,
+  customGroups,
+  translate = (name) => name,
+  sortableByValue = false,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [selectedName, setSelectedName] = useState(null);
   const [expandedMatchGroups, setExpandedMatchGroups] = useState({});
+  // Only meaningful when sortableByValue: the incoming `counts` is already
+  // chronological (see computeStats), "count" re-sorts it most-watched first.
+  const [sortMode, setSortMode] = useState('value');
+  const displayedCounts = sortableByValue && sortMode === 'count' ? [...counts].sort((a, b) => b[1] - a[1]) : counts;
   const max = Math.max(1, ...counts.map(([, count]) => count));
   const containerRef = useRef(null);
 
@@ -60,12 +72,22 @@ function BreakdownSection({ title, counts, list, field, customGroups, translate 
       >
         {title}
       </button>
+      {expanded && sortableByValue && (
+        <div className="stats-breakdown__sort-toggle" role="group" aria-label="Trier par">
+          <button type="button" aria-pressed={sortMode === 'value'} onClick={() => setSortMode('value')}>
+            Date
+          </button>
+          <button type="button" aria-pressed={sortMode === 'count'} onClick={() => setSortMode('count')}>
+            Nombre d'anime vu
+          </button>
+        </div>
+      )}
       {expanded && (
         <ul className="stats-breakdown__list">
           {counts.length === 0 && (
             <li className="stats-breakdown__empty">Rien à afficher pour l'instant.</li>
           )}
-          {counts.map(([name, count]) => {
+          {displayedCounts.map(([name, count]) => {
             const label = translate(name);
             const isSelected = selectedName === name;
             // Anime lookup is purely local (the personal list is already in
@@ -205,6 +227,7 @@ function Stats() {
         list={watchedList}
         field="seasonYear"
         customGroups={customGroups}
+        sortableByValue
       />
     </section>
   );

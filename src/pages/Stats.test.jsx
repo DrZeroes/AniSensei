@@ -113,6 +113,40 @@ describe('Stats', () => {
     expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
   });
 
+  it('lets the user switch the year breakdown between chronological and most-watched-first sorting', async () => {
+    getList.mockReturnValue([
+      { ...watched, animeId: 1, seasonYear: 2006 },
+      { ...watched2, animeId: 2, seasonYear: 2011 },
+      { ...watched, animeId: 3, seasonYear: 2011 },
+      { ...watched2, animeId: 4, seasonYear: 2020 },
+    ]);
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par année' }));
+
+    const yearList = screen.getByText('2006').closest('ul');
+    expect(within(yearList).getAllByText(/^\d{4}$/).map((el) => el.textContent)).toEqual([
+      '2006',
+      '2011',
+      '2020',
+    ]);
+
+    await user.click(screen.getByRole('button', { name: "Nombre d'anime vu" }));
+    expect(within(yearList).getAllByText(/^\d{4}$/).map((el) => el.textContent)).toEqual([
+      '2011',
+      '2006',
+      '2020',
+    ]);
+
+    await user.click(screen.getByRole('button', { name: 'Date' }));
+    expect(within(yearList).getAllByText(/^\d{4}$/).map((el) => el.textContent)).toEqual([
+      '2006',
+      '2011',
+      '2020',
+    ]);
+  });
+
   it('shows which anime match a genre/studio/tag when clicked, purely from the local list (no API call)', async () => {
     getList.mockReturnValue([
       { ...watched, title: 'Fate/Zero' },

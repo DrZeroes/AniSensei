@@ -30,6 +30,8 @@ async function runBackfill(stale) {
   for (let i = 0; i < stale.length; i += 1) {
     const entry = stale[i];
     let failed = false;
+    // TEMPORARY DEBUG LOG — maps the anime id in the request log to a title.
+    console.log(`[Backfill] ${i + 1}/${stale.length} — "${entry.title}" (id: ${entry.animeId})`);
     try {
       const details = await getAnimeDetails(entry.animeId);
       const updated = getList().map((item) =>

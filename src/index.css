@@ -822,6 +822,8 @@ button:focus-visible {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--accent-2);
 }
 
 .checklist__group-count {
@@ -1362,8 +1364,9 @@ button:focus-visible {
 
 .my-groups-list__item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1371,7 +1374,9 @@ button:focus-visible {
 }
 
 .my-groups-list__title {
-  flex-grow: 1;
+  /* A basis wide enough that it wraps the trailing buttons onto their own
+     line instead of shrinking to nothing on narrow screens. */
+  flex: 1 1 140px;
   min-width: 0;
   font-weight: 600;
   overflow: hidden;

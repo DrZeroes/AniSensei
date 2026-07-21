@@ -397,6 +397,25 @@ describe('MyList', () => {
     expect(screen.getByText('Puella Magi Madoka Magica')).toBeInTheDocument();
   });
 
+  it('scrolls the group form into view when opening it, whether creating or editing', async () => {
+    getList.mockReturnValue([{ ...entry, animeId: 1, title: 'Clannad' }]);
+    const scrollIntoViewSpy = vi.spyOn(Element.prototype, 'scrollIntoView');
+    const user = userEvent.setup();
+    renderMyList();
+
+    await user.click(screen.getByRole('tab', { name: 'Mes groupes' }));
+    await user.click(screen.getByRole('button', { name: 'Créer un groupe' }));
+    expect(scrollIntoViewSpy).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Ajouter Clannad au groupe' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await user.click(screen.getByRole('button', { name: 'Modifier' }));
+    expect(scrollIntoViewSpy).toHaveBeenCalledTimes(2);
+
+    scrollIntoViewSpy.mockRestore();
+  });
+
   it('offers anime to add to a group sorted alphabetically', async () => {
     getList.mockReturnValue([
       { ...entry, animeId: 1, title: 'Zelda Anime' },

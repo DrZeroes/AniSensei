@@ -111,6 +111,24 @@ describe('Stats', () => {
     expect(screen.queryByText('Fate/Zero')).not.toBeInTheDocument();
   });
 
+  it('closes the "which anime" panel when clicking elsewhere on the page', async () => {
+    getList.mockReturnValue([{ ...watched, title: 'Fate/Zero' }]);
+    const user = userEvent.setup();
+    render(
+      <div>
+        <Stats />
+        <button type="button">Elsewhere</button>
+      </div>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
+    await user.click(screen.getByRole('button', { name: /Action/ }));
+    expect(screen.getByText('Fate/Zero')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
+    expect(screen.queryByText('Fate/Zero')).not.toBeInTheDocument();
+  });
+
   it('shows a message when there is nothing watched yet', async () => {
     getList.mockReturnValue([toWatch]);
     const user = userEvent.setup();

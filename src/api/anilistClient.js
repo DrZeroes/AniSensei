@@ -10,7 +10,28 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Counts every actual HTTP request sent to AniList this session (including
+// retries), so the UI can show it — visibility into how much traffic e.g.
+// the studios/tags backfill is generating.
+let requestCount = 0;
+const requestCountListeners = new Set();
+
+export function getRequestCount() {
+  return requestCount;
+}
+
+export function subscribeRequestCount(listener) {
+  requestCountListeners.add(listener);
+  return () => requestCountListeners.delete(listener);
+}
+
+function recordRequest() {
+  requestCount += 1;
+  for (const listener of requestCountListeners) listener(requestCount);
+}
+
 export async function anilistQuery(query, variables = {}, attempt = 0) {
+  recordRequest();
   const response = await fetch(ANILIST_ENDPOINT, {
     method: 'POST',
     headers: {

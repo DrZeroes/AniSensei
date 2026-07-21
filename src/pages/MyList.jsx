@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { getList, saveList, upsertAnime, removeAnime } from '../storage/listStorage.js';
@@ -105,6 +105,19 @@ function MyList() {
   const [groupForm, setGroupForm] = useState(null);
   const [groupFormSearch, setGroupFormSearch] = useState('');
   const [draggedAnimeId, setDraggedAnimeId] = useState(null);
+  const groupFormRef = useRef(null);
+  const wasGroupFormOpenRef = useRef(false);
+
+  // Scrolls the group form into view the moment it opens (create or edit) —
+  // with a long "Mes groupes" list, clicking "Modifier" on an entry far down
+  // the page would otherwise leave the form open off-screen, above.
+  useEffect(() => {
+    const isOpen = !!groupForm;
+    if (isOpen && !wasGroupFormOpenRef.current) {
+      groupFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    wasGroupFormOpenRef.current = isOpen;
+  }, [groupForm]);
 
   function toggleGroup(key) {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -423,7 +436,12 @@ function MyList() {
 
   function renderGroupForm() {
     return (
-      <div className="group-form" role="dialog" aria-label={groupForm.id ? 'Modifier le groupe' : 'Créer un groupe'}>
+      <div
+        className="group-form"
+        role="dialog"
+        aria-label={groupForm.id ? 'Modifier le groupe' : 'Créer un groupe'}
+        ref={groupFormRef}
+      >
         <h3>{groupForm.id ? 'Modifier le groupe' : 'Créer un groupe personnalisé'}</h3>
         <label className="group-form__field">
           Titre du groupe

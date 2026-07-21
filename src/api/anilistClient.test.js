@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { anilistQuery } from './anilistClient.js';
+import { anilistQuery, getRequestCount, subscribeRequestCount } from './anilistClient.js';
 
 describe('anilistQuery', () => {
   afterEach(() => {
@@ -75,5 +75,23 @@ describe('anilistQuery', () => {
 
     await expect(anilistQuery('query {}')).rejects.toThrow('statut 429');
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('counts every actual HTTP request, including retries, and notifies subscribers', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: { get: () => '0.01' }, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const before = getRequestCount();
+    const notified = [];
+    const unsubscribe = subscribeRequestCount((count) => notified.push(count));
+
+    await anilistQuery('query {}');
+
+    expect(getRequestCount()).toBe(before + 2); // initial attempt + one retry
+    expect(notified).toEqual([before + 1, before + 2]);
+    unsubscribe();
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getList } from '../storage/listStorage.js';
 import { backfillListMetadata } from '../storage/backfillMetadata.js';
 import { computeStats } from '../stats/computeStats.js';
@@ -18,13 +18,28 @@ function BreakdownSection({ title, counts, list, field, translate = (name) => na
   const [expanded, setExpanded] = useState(false);
   const [selectedName, setSelectedName] = useState(null);
   const max = counts[0]?.[1] ?? 1;
+  const containerRef = useRef(null);
 
   function toggleSelected(name) {
     setSelectedName((prev) => (prev === name ? null : name));
   }
 
+  // Clicking anywhere outside the currently open "which anime" panel closes it.
+  useEffect(() => {
+    if (!selectedName) return undefined;
+
+    function handlePointerDown(event) {
+      if (!containerRef.current?.contains(event.target)) {
+        setSelectedName(null);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [selectedName]);
+
   return (
-    <div className="stats-breakdown">
+    <div className="stats-breakdown" ref={containerRef}>
       <button
         type="button"
         className="stats-breakdown__toggle"

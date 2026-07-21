@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import VersionBadge from './VersionBadge.jsx';
+import { anilistQuery } from '../api/anilistClient.js';
 
 vi.mock('../generated/changelog.json', () => ({
   default: [
@@ -14,7 +15,7 @@ describe('VersionBadge', () => {
   it('shows the version and hides the changelog by default', () => {
     render(<VersionBadge />);
 
-    expect(screen.getByRole('button', { name: 'dev' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dev/ })).toBeInTheDocument();
     expect(screen.queryByText(/Add version badge and changelog/)).not.toBeInTheDocument();
   });
 
@@ -22,7 +23,7 @@ describe('VersionBadge', () => {
     const user = userEvent.setup();
     render(<VersionBadge />);
 
-    await user.click(screen.getByRole('button', { name: 'dev' }));
+    await user.click(screen.getByRole('button', { name: /dev/ }));
 
     expect(screen.getByText(/Add version badge and changelog/)).toBeInTheDocument();
     expect(screen.getByText(/Fix search dropdown/)).toBeInTheDocument();
@@ -32,8 +33,8 @@ describe('VersionBadge', () => {
     const user = userEvent.setup();
     render(<VersionBadge />);
 
-    await user.click(screen.getByRole('button', { name: 'dev' }));
-    await user.click(screen.getByRole('button', { name: 'dev' }));
+    await user.click(screen.getByRole('button', { name: /dev/ }));
+    await user.click(screen.getByRole('button', { name: /dev/ }));
 
     expect(screen.queryByText(/Add version badge and changelog/)).not.toBeInTheDocument();
   });
@@ -47,7 +48,7 @@ describe('VersionBadge', () => {
       </div>
     );
 
-    await user.click(screen.getByRole('button', { name: 'dev' }));
+    await user.click(screen.getByRole('button', { name: /dev/ }));
     expect(screen.getByText(/Add version badge and changelog/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
@@ -59,9 +60,22 @@ describe('VersionBadge', () => {
     const user = userEvent.setup();
     render(<VersionBadge />);
 
-    await user.click(screen.getByRole('button', { name: 'dev' }));
+    await user.click(screen.getByRole('button', { name: /dev/ }));
     await user.click(screen.getByRole('dialog'));
 
     expect(screen.getByText(/Add version badge and changelog/)).toBeInTheDocument();
+  });
+
+  it('shows a live count of AniList requests sent this session', async () => {
+    render(<VersionBadge />);
+    const before = screen.getByRole('button', { name: /requêtes? AniList/ }).textContent;
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {} }) }));
+    await act(() => anilistQuery('query {}'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /requêtes? AniList/ }).textContent).not.toBe(before);
+    });
+    vi.unstubAllGlobals();
   });
 });

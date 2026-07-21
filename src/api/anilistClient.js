@@ -39,14 +39,27 @@ export async function anilistQuery(query, variables = {}, attempt = 0) {
     `[AniList] requête #${requestCount}${attempt > 0 ? ` (retry ${attempt})` : ''} — ${operationName.replace(/\s+/g, ' ')} — variables:`,
     variables
   );
-  const response = await fetch(ANILIST_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  let response;
+  try {
+    response = await fetch(ANILIST_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+  } catch (error) {
+    // A 429 from AniList sometimes comes back with no CORS headers at all,
+    // which the browser surfaces as a plain "Failed to fetch" — indistinguishable
+    // here from an actual network error — so `response` is never even reached.
+    // Retry with backoff either way; a real network error would fail again too.
+    if (attempt < MAX_RETRIES) {
+      await wait(BASE_DELAY_MS * 2 ** attempt);
+      return anilistQuery(query, variables, attempt + 1);
+    }
+    throw error;
+  }
 
   if (!response.ok && isRetryableStatus(response.status) && attempt < MAX_RETRIES) {
     const retryAfter = Number(response.headers?.get?.('Retry-After'));

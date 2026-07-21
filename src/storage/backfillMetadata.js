@@ -4,12 +4,17 @@ import { getAnimeDetails } from '../api/queries.js';
 let inFlight = null;
 
 // One request at a time, with a pause in between: AniList rate-limits
-// anonymous requests (~90/min). Firing every stale entry's fetch at once via
-// Promise.all got most of them 429'd and silently dropped (caught, then
-// never retried), which is why large lists only ever got partially
-// backfilled. Sequential + throttled reliably gets through the whole list,
-// just slower.
-const REQUEST_DELAY_MS = 700;
+// anonymous requests, and in practice a 429 sometimes comes back with no
+// CORS headers at all, which the browser reports as a plain failed fetch —
+// indistinguishable from a real network error, and impossible to read a
+// Retry-After from. Firing every stale entry's fetch at once via Promise.all
+// got most of them 429'd and silently dropped (caught, then never retried),
+// which is why large lists only ever got partially backfilled. Even at one
+// request every 700ms this still happened, so the delay is deliberately
+// conservative — and backs off further after a failure, since that's the
+// clearest sign the current pace is still too fast.
+const REQUEST_DELAY_MS = 2500;
+const FAILURE_BACKOFF_MS = 5000;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,6 +29,7 @@ async function runBackfill(stale) {
   let latestList = null;
   for (let i = 0; i < stale.length; i += 1) {
     const entry = stale[i];
+    let failed = false;
     try {
       const details = await getAnimeDetails(entry.animeId);
       const updated = getList().map((item) =>
@@ -35,8 +41,9 @@ async function runBackfill(stale) {
       latestList = updated;
     } catch {
       // Left as-is; picked up again by the next backfill run.
+      failed = true;
     }
-    if (i < stale.length - 1) await wait(REQUEST_DELAY_MS);
+    if (i < stale.length - 1) await wait(failed ? FAILURE_BACKOFF_MS : REQUEST_DELAY_MS);
   }
   return latestList;
 }

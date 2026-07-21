@@ -77,6 +77,27 @@ describe('anilistQuery', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('retries when fetch itself rejects (e.g. a 429 with no CORS headers, surfaced as a network error), then succeeds', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { Media: { id: 1 } } }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const data = await anilistQuery('query {}');
+
+    expect(data).toEqual({ Media: { id: 1 } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up and rethrows after exceeding the retry limit on repeated fetch rejections', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(anilistQuery('query {}')).rejects.toThrow('Failed to fetch');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('counts every actual HTTP request, including retries, and notifies subscribers', async () => {
     const fetchMock = vi
       .fn()

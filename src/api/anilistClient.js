@@ -32,6 +32,13 @@ function recordRequest() {
 
 export async function anilistQuery(query, variables = {}, attempt = 0) {
   recordRequest();
+  // TEMPORARY DEBUG LOG — remove once the studios/tags backfill traffic has
+  // been confirmed to behave as expected, this isn't meant to stay.
+  const operationName = query.trim().match(/^\s*query\s*(?:\w+)?\s*\(([^)]*)\)/)?.[0] ?? query.trim().slice(0, 40);
+  console.log(
+    `[AniList] requête #${requestCount}${attempt > 0 ? ` (retry ${attempt})` : ''} — ${operationName.replace(/\s+/g, ' ')} — variables:`,
+    variables
+  );
   const response = await fetch(ANILIST_ENDPOINT, {
     method: 'POST',
     headers: {

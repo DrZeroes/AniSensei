@@ -1,9 +1,13 @@
 const MAX_TAG_BREAKDOWN = 20;
 
+// Works for both array fields (genres/studios/tags) and scalar fields
+// (seasonYear) — a scalar counts as a single value, unless null/undefined.
 function countBy(entries, field) {
   const counts = new Map();
   for (const entry of entries) {
-    for (const value of entry[field] ?? []) {
+    const raw = entry[field];
+    const values = Array.isArray(raw) ? raw : raw !== null && raw !== undefined ? [raw] : [];
+    for (const value of values) {
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
   }
@@ -23,6 +27,8 @@ export function computeStats(list) {
   // Tags run into the hundreds of distinct values (unlike genres/studios),
   // so the breakdown is capped to the top 20 rather than showing everything.
   const tagCounts = countBy(watched, 'tags').slice(0, MAX_TAG_BREAKDOWN);
+  // Read as a timeline, so chronological (oldest first) rather than by count.
+  const yearCounts = countBy(watched, 'seasonYear').sort((a, b) => a[0] - b[0]);
 
   return {
     total: list.length,
@@ -37,5 +43,6 @@ export function computeStats(list) {
     genreCounts,
     studioCounts,
     tagCounts,
+    yearCounts,
   };
 }

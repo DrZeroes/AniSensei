@@ -93,6 +93,26 @@ describe('Stats', () => {
     expect(tsundereRow).toHaveTextContent('1');
   });
 
+  it('shows a year breakdown, and which anime match a given year when clicked', async () => {
+    getList.mockReturnValue([
+      { ...watched, title: 'Fate/Zero', seasonYear: 2011 },
+      { ...watched2, title: 'Fate/stay night', seasonYear: 2006 },
+    ]);
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par année' }));
+
+    // Chronological (oldest first), unlike the count-sorted breakdowns.
+    const yearList = screen.getByText('2006').closest('ul');
+    const labels = within(yearList).getAllByText(/^\d{4}$/);
+    expect(labels.map((el) => el.textContent)).toEqual(['2006', '2011']);
+
+    await user.click(screen.getByText('2011').closest('button'));
+    expect(screen.getByText('Fate/Zero')).toBeInTheDocument();
+    expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
+  });
+
   it('shows which anime match a genre/studio/tag when clicked, purely from the local list (no API call)', async () => {
     getList.mockReturnValue([
       { ...watched, title: 'Fate/Zero' },
@@ -129,7 +149,7 @@ describe('Stats', () => {
     expect(items.map((item) => item.textContent)).toEqual(['Attack on Titan', 'Zelda Anime']);
   });
 
-  it('groups matching anime under their custom group name, for clarity', async () => {
+  it('groups matching anime under their custom group name, collapsed until clicked', async () => {
     getList.mockReturnValue([
       { ...watched, animeId: 1, title: 'Fate/Zero' },
       { ...watched2, animeId: 2, title: 'Fate/stay night' },
@@ -143,6 +163,11 @@ describe('Stats', () => {
 
     expect(screen.getByText('Fate')).toBeInTheDocument();
     expect(screen.getByText('(2 animes)')).toBeInTheDocument();
+    expect(screen.queryByText('Fate/stay night')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fate/Zero')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Fate/ }));
+
     expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
     expect(screen.getByText('Fate/Zero')).toBeInTheDocument();
   });

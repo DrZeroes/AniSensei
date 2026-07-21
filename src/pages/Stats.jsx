@@ -16,14 +16,24 @@ function StatTile({ label, value }) {
   );
 }
 
+function matchesFieldValue(entry, field, name) {
+  const raw = entry[field];
+  return Array.isArray(raw) ? raw.includes(name) : raw === name;
+}
+
 function BreakdownSection({ title, counts, list, field, customGroups, translate = (name) => name }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedName, setSelectedName] = useState(null);
-  const max = counts[0]?.[1] ?? 1;
+  const [expandedMatchGroups, setExpandedMatchGroups] = useState({});
+  const max = Math.max(1, ...counts.map(([, count]) => count));
   const containerRef = useRef(null);
 
   function toggleSelected(name) {
     setSelectedName((prev) => (prev === name ? null : name));
+  }
+
+  function toggleMatchGroup(key) {
+    setExpandedMatchGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
   // Clicking anywhere outside the currently open "which anime" panel closes it.
@@ -64,7 +74,7 @@ function BreakdownSection({ title, counts, list, field, customGroups, translate 
             // group name instead of as separate lines, for clarity.
             const matchingBlocks = isSelected
               ? applyCustomGroups(
-                  list.filter((entry) => (entry[field] ?? []).includes(name)),
+                  list.filter((entry) => matchesFieldValue(entry, field, name)),
                   customGroups
                 ).sort((a, b) => {
                   const titleA = a.custom ? a.custom.title : a.entries[0].title;
@@ -91,21 +101,31 @@ function BreakdownSection({ title, counts, list, field, customGroups, translate 
                 </button>
                 {isSelected && (
                   <ul className="stats-breakdown__titles">
-                    {matchingBlocks.map((block) =>
-                      block.custom ? (
+                    {matchingBlocks.map((block) => {
+                      if (!block.custom) return <li key={block.key}>{block.entries[0].title}</li>;
+
+                      const groupExpanded = !!expandedMatchGroups[block.key];
+                      return (
                         <li key={block.key}>
-                          <strong className="stats-breakdown__group-title">{block.custom.title}</strong>{' '}
-                          <span className="stats-breakdown__count">({block.entries.length} animes)</span>
-                          <ul className="stats-breakdown__group-members">
-                            {block.entries.map((entry) => (
-                              <li key={entry.animeId}>{entry.title}</li>
-                            ))}
-                          </ul>
+                          <button
+                            type="button"
+                            className="stats-breakdown__group-toggle"
+                            aria-expanded={groupExpanded}
+                            onClick={() => toggleMatchGroup(block.key)}
+                          >
+                            <strong className="stats-breakdown__group-title">{block.custom.title}</strong>{' '}
+                            <span className="stats-breakdown__count">({block.entries.length} animes)</span>
+                          </button>
+                          {groupExpanded && (
+                            <ul className="stats-breakdown__group-members">
+                              {block.entries.map((entry) => (
+                                <li key={entry.animeId}>{entry.title}</li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
-                      ) : (
-                        <li key={block.key}>{block.entries[0].title}</li>
-                      )
-                    )}
+                      );
+                    })}
                   </ul>
                 )}
               </li>
@@ -178,6 +198,13 @@ function Stats() {
         field="tags"
         customGroups={customGroups}
         translate={translateTag}
+      />
+      <BreakdownSection
+        title="Voir la répartition par année"
+        counts={stats.yearCounts}
+        list={watchedList}
+        field="seasonYear"
+        customGroups={customGroups}
       />
     </section>
   );

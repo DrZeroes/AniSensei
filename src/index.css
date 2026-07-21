@@ -1725,6 +1725,17 @@ button:focus-visible {
   color: var(--text-muted);
 }
 
+.stats-breakdown__group-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
 .stats-breakdown__group-title {
   color: var(--accent-2);
 }

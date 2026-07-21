@@ -92,6 +92,25 @@ describe('computeStats', () => {
     ]);
   });
 
+  it('returns a year breakdown from watched anime, sorted chronologically (not by count)', () => {
+    const stats = computeStats([
+      { ...watchedFavorite, seasonYear: 2016 },
+      { ...watchedLiked, seasonYear: 1999 },
+      { ...watchedDisliked, seasonYear: 1999 },
+    ]);
+
+    expect(stats.yearCounts).toEqual([
+      [1999, 2],
+      [2016, 1],
+    ]);
+  });
+
+  it('excludes watched entries with no known season year from the year breakdown', () => {
+    const stats = computeStats([{ ...watchedFavorite, seasonYear: null }]);
+
+    expect(stats.yearCounts).toEqual([]);
+  });
+
   it('caps the tag breakdown to the top 20', () => {
     const manyTagEntries = Array.from({ length: 25 }, (_, i) => ({
       animeId: 100 + i,

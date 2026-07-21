@@ -14,9 +14,14 @@ function StatTile({ label, value }) {
   );
 }
 
-function BreakdownSection({ title, counts, translate = (name) => name }) {
+function BreakdownSection({ title, counts, list, field, translate = (name) => name }) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedName, setSelectedName] = useState(null);
   const max = counts[0]?.[1] ?? 1;
+
+  function toggleSelected(name) {
+    setSelectedName((prev) => (prev === name ? null : name));
+  }
 
   return (
     <div className="stats-breakdown">
@@ -35,15 +40,36 @@ function BreakdownSection({ title, counts, translate = (name) => name }) {
           )}
           {counts.map(([name, count]) => {
             const label = translate(name);
+            const isSelected = selectedName === name;
+            // Anime lookup is purely local (the personal list is already in
+            // memory) — no AniList request needed to answer "which anime?".
+            const matchingTitles = isSelected
+              ? list.filter((entry) => (entry[field] ?? []).includes(name)).map((entry) => entry.title)
+              : [];
+
             return (
               <li key={name}>
-                <span className="stats-breakdown__label" title={label !== name ? name : undefined}>
-                  {label}
-                </span>
-                <span className="stats-breakdown__bar-wrap">
-                  <span className="stats-breakdown__bar" style={{ width: `${(count / max) * 100}%` }} />
-                </span>
-                <span className="stats-breakdown__count">{count}</span>
+                <button
+                  type="button"
+                  className="stats-breakdown__row"
+                  aria-expanded={isSelected}
+                  onClick={() => toggleSelected(name)}
+                >
+                  <span className="stats-breakdown__label" title={label !== name ? name : undefined}>
+                    {label}
+                  </span>
+                  <span className="stats-breakdown__bar-wrap">
+                    <span className="stats-breakdown__bar" style={{ width: `${(count / max) * 100}%` }} />
+                  </span>
+                  <span className="stats-breakdown__count">{count}</span>
+                </button>
+                {isSelected && (
+                  <ul className="stats-breakdown__titles">
+                    {matchingTitles.map((animeTitle) => (
+                      <li key={animeTitle}>{animeTitle}</li>
+                    ))}
+                  </ul>
+                )}
               </li>
             );
           })}
@@ -71,6 +97,9 @@ function Stats() {
   }, [list]);
 
   const stats = computeStats(list);
+  // The genre/studio/tag breakdowns only ever count watched anime — match
+  // that same subset when looking up which anime a clicked row corresponds to.
+  const watchedList = list.filter((entry) => entry.status === 'vu');
 
   return (
     <section>
@@ -91,10 +120,23 @@ function Stats() {
       <BreakdownSection
         title="Voir la répartition par genre"
         counts={stats.genreCounts}
+        list={watchedList}
+        field="genres"
         translate={translateGenre}
       />
-      <BreakdownSection title="Voir la répartition par studio" counts={stats.studioCounts} />
-      <BreakdownSection title="Voir le top 20 des tags" counts={stats.tagCounts} translate={translateTag} />
+      <BreakdownSection
+        title="Voir la répartition par studio"
+        counts={stats.studioCounts}
+        list={watchedList}
+        field="studios"
+      />
+      <BreakdownSection
+        title="Voir le top 20 des tags"
+        counts={stats.tagCounts}
+        list={watchedList}
+        field="tags"
+        translate={translateTag}
+      />
     </section>
   );
 }

@@ -91,6 +91,26 @@ describe('Stats', () => {
     expect(tsundereRow).toHaveTextContent('1');
   });
 
+  it('shows which anime match a genre/studio/tag when clicked, purely from the local list (no API call)', async () => {
+    getList.mockReturnValue([
+      { ...watched, title: 'Fate/Zero' },
+      { ...watched2, title: 'Fate/stay night' },
+    ]);
+    const user = userEvent.setup();
+    render(<Stats />);
+
+    await user.click(screen.getByRole('button', { name: 'Voir la répartition par genre' }));
+    await user.click(screen.getByRole('button', { name: /Action/ }));
+
+    expect(screen.getByText('Fate/Zero')).toBeInTheDocument();
+    expect(screen.getByText('Fate/stay night')).toBeInTheDocument();
+    expect(getAnimeDetails).not.toHaveBeenCalled();
+
+    // Clicking again collapses the list of titles.
+    await user.click(screen.getByRole('button', { name: /Action/ }));
+    expect(screen.queryByText('Fate/Zero')).not.toBeInTheDocument();
+  });
+
   it('shows a message when there is nothing watched yet', async () => {
     getList.mockReturnValue([toWatch]);
     const user = userEvent.setup();

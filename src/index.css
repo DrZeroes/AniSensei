@@ -1683,11 +1683,41 @@ button:focus-visible {
 }
 
 .stats-breakdown__list li {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.stats-breakdown__row {
   display: grid;
   grid-template-columns: 120px 1fr auto;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.85rem;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stats-breakdown__row:hover .stats-breakdown__label {
+  color: var(--accent-2);
+}
+
+.stats-breakdown__titles {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0.3rem 0 0.3rem 0.6rem;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .stats-breakdown__label {

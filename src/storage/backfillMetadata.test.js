@@ -46,6 +46,46 @@ describe('backfillListMetadata', () => {
     expect(getList()).toEqual(result);
   });
 
+  it('processes every stale entry one at a time, not all at once', async () => {
+    const staleEntries = [2, 3, 4].map((animeId) => ({
+      ...freshEntry,
+      animeId,
+      studiosRefreshed: undefined,
+      studios: ['Aniplex'],
+    }));
+    saveList([freshEntry, ...staleEntries]);
+    getAnimeDetails.mockImplementation((animeId) =>
+      Promise.resolve({ tags: ['Pirates'], studios: [`Real Studio ${animeId}`] })
+    );
+
+    const result = await backfillListMetadata();
+
+    expect(getAnimeDetails).toHaveBeenCalledTimes(3);
+    for (const animeId of [2, 3, 4]) {
+      expect(result.find((entry) => entry.animeId === animeId)).toMatchObject({
+        studios: [`Real Studio ${animeId}`],
+        studiosRefreshed: true,
+      });
+    }
+  });
+
+  it('leaves an entry stale (for the next run) if fetching its details fails, without losing others', async () => {
+    const staleEntries = [2, 3].map((animeId) => ({
+      ...freshEntry,
+      animeId,
+      studiosRefreshed: undefined,
+    }));
+    saveList([...staleEntries]);
+    getAnimeDetails.mockImplementation((animeId) =>
+      animeId === 2 ? Promise.reject(new Error('network')) : Promise.resolve({ tags: [], studios: ['ufotable'] })
+    );
+
+    const result = await backfillListMetadata();
+
+    expect(result.find((entry) => entry.animeId === 2).studiosRefreshed).not.toBe(true);
+    expect(result.find((entry) => entry.animeId === 3)).toMatchObject({ studiosRefreshed: true });
+  });
+
   it('shares a single in-flight fetch across concurrent calls', async () => {
     const staleEntry = { ...freshEntry, animeId: 2, studiosRefreshed: undefined };
     saveList([staleEntry]);

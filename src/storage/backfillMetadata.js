@@ -3,6 +3,44 @@ import { getAnimeDetails } from '../api/queries.js';
 
 let inFlight = null;
 
+// One request at a time, with a pause in between: AniList rate-limits
+// anonymous requests (~90/min). Firing every stale entry's fetch at once via
+// Promise.all got most of them 429'd and silently dropped (caught, then
+// never retried), which is why large lists only ever got partially
+// backfilled. Sequential + throttled reliably gets through the whole list,
+// just slower.
+const REQUEST_DELAY_MS = 700;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runBackfill(stale) {
+  // Tracks the last successfully saved list directly, rather than re-reading
+  // getList() once at the end — storage reads/writes are mocked as plain
+  // stubs in some tests (no real persistence), and even in production a
+  // fresh read isn't needed here since each iteration already re-reads
+  // before applying its own change.
+  let latestList = null;
+  for (let i = 0; i < stale.length; i += 1) {
+    const entry = stale[i];
+    try {
+      const details = await getAnimeDetails(entry.animeId);
+      const updated = getList().map((item) =>
+        item.animeId === entry.animeId
+          ? { ...item, tags: details.tags, studios: details.studios, studiosRefreshed: true }
+          : item
+      );
+      saveList(updated);
+      latestList = updated;
+    } catch {
+      // Left as-is; picked up again by the next backfill run.
+    }
+    if (i < stale.length - 1) await wait(REQUEST_DELAY_MS);
+  }
+  return latestList;
+}
+
 // Refreshes list entries with legacy/incomplete metadata: entries added
 // before tags were tracked (`tags === undefined`), and entries fetched
 // before the AniList studios query was fixed to exclude producers/
@@ -22,28 +60,9 @@ export function backfillListMetadata(list = getList()) {
   const stale = list.filter((entry) => entry.tags === undefined || entry.studiosRefreshed !== true);
   if (stale.length === 0) return Promise.resolve(null);
 
-  inFlight = Promise.all(
-    stale.map((entry) =>
-      getAnimeDetails(entry.animeId)
-        .then((details) => ({ animeId: entry.animeId, tags: details.tags, studios: details.studios }))
-        .catch(() => null)
-    )
-  )
-    .then((results) => {
-      const fetched = results.filter(Boolean);
-      if (fetched.length === 0) return null;
-      let updated = getList();
-      for (const { animeId, tags, studios } of fetched) {
-        updated = updated.map((entry) =>
-          entry.animeId === animeId ? { ...entry, tags, studios, studiosRefreshed: true } : entry
-        );
-      }
-      saveList(updated);
-      return updated;
-    })
-    .finally(() => {
-      inFlight = null;
-    });
+  inFlight = runBackfill(stale).finally(() => {
+    inFlight = null;
+  });
 
   return inFlight;
 }
